@@ -30,11 +30,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 		String token = extractToken(request);
 		if (token != null && jwtUtil.validateToken(token)) {
+			int userId = jwtUtil.extractUserId(token);
 			String email = jwtUtil.extractEmail(token);
 			String role = jwtUtil.extractRole(token);
 
 			var authority = new SimpleGrantedAuthority(role != null ? role : "ROLE_USER");
-			var auth = new UsernamePasswordAuthenticationToken(email, null, List.of(authority));
+			var auth = new UsernamePasswordAuthenticationToken(userId, null, List.of(authority));
 			SecurityContextHolder.getContext().setAuthentication(auth);
 			log.debug("Authenticated User '{}' via Jwt", email);
 		}

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -23,40 +22,36 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class JwtUtil {
+
 	@Value("${jwt.secret}")
 	private String jwtSecret;
 
-	@Value("${jwt.access-token-expiry}")
-	private Long accessTokenExpiry;
+	@Value("${jwt.access-token-expiry-ms:900000}")
+	private long accessTokenExpiry;
 
-	@Value("${jwt.refresh-token-expiry}")
-	private Long refreshTokenExpiry;
+	@Value("${jwt.refresh-token-expiry-ms:604800000}")
+	private long refreshTokenExpiry;
 
 	private final Set<String> tokenDenylist = ConcurrentHashMap.newKeySet();
 
-	public String generateAccessToken(String email, String role) {
-		return buildToken(email, role, accessTokenExpiry, "access");
+	public String generateAccessToken(String email, String role, int userId) {
+		return Jwts.builder().setSubject(email).setIssuedAt(new Date())
+				.setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiry)).claim("type", "access")
+				.claim("role", role).claim("userId", userId).signWith(getSigningKey(), SignatureAlgorithm.HS512)
+				.compact();
 	}
 
 	public String generateRefreshToken(String email) {
-		return buildToken(email, null, refreshTokenExpiry, "refresh");
-	}
-
-	private String buildToken(String subject, String role, Long expiry, String tokenType) {
-		JwtBuilder builder = Jwts.builder().setSubject(subject).setIssuedAt(new Date())
-				.setExpiration(new Date(System.currentTimeMillis() + expiry)).claim("type", tokenType)
-				.signWith(getSigningKey(), SignatureAlgorithm.HS512);
-		if (role != null) {
-			builder.claim("role", role);
-		}
-		return builder.compact();
+		return Jwts.builder().setSubject(email).setIssuedAt(new Date())
+				.setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpiry)).claim("type", "refresh")
+				.signWith(getSigningKey(), SignatureAlgorithm.HS512).compact();
 	}
 
 	public boolean validateToken(String token) {
 		try {
-			Claims claims = parseClaims(token);
+			parseClaims(token);
 			if (tokenDenylist.contains(token)) {
-				log.warn("Denylisted token used: {}", token.substring(0, 20));
+				log.warn("Denylisted token attempted");
 				return false;
 			}
 			return true;
@@ -67,7 +62,7 @@ public class JwtUtil {
 		} catch (MalformedJwtException e) {
 			log.warn("Malformed JWT: {}", e.getMessage());
 		} catch (SecurityException e) {
-			log.warn("Invalid JWT signature: {}", e.getMessage());
+			log.warn("Bad JWT signature: {}", e.getMessage());
 		} catch (IllegalArgumentException e) {
 			log.warn("Empty JWT: {}", e.getMessage());
 		}
@@ -82,12 +77,17 @@ public class JwtUtil {
 		return parseClaims(token).get("role", String.class);
 	}
 
-	public Date extractExpiry(String token) {
-		return parseClaims(token).getExpiration();
+	public int extractUserId(String token) {
+		Object id = parseClaims(token).get("userId");
+		if (id instanceof Integer)
+			return (Integer) id;
+		if (id instanceof Long)
+			return ((Long) id).intValue();
+		return 0;
 	}
 
-	private Claims parseClaims(String token) {
-		return Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
+	public Date extractExpiry(String token) {
+		return parseClaims(token).getExpiration();
 	}
 
 	public void denylistToken(String token) {
@@ -98,8 +98,11 @@ public class JwtUtil {
 		return tokenDenylist.contains(token);
 	}
 
+	private Claims parseClaims(String token) {
+		return Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
+	}
+
 	private SecretKey getSigningKey() {
-		byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
-		return Keys.hmacShaKeyFor(keyBytes);
+		return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
 	}
 }
