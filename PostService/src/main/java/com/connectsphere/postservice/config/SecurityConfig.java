@@ -6,6 +6,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -21,6 +22,12 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtFilter;
+
+	@Bean
+	WebSecurityCustomizer webSecurityCustomizer() {
+		return web -> web.ignoring().requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
+				"/v3/api-docs", "/webjars/**", "/swagger-resources/**", "/configuration/**");
+	}
 
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
