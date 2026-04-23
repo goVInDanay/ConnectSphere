@@ -64,48 +64,36 @@ public class AuthController {
 		return ResponseEntity.ok(Map.of("accessToken", newToken));
 	}
 
-	@GetMapping("/profile")
-	public ResponseEntity<User> getProfile(@AuthenticationPrincipal String email) {
-
-		User user = authService.getUserByEmail(email);
-		return ResponseEntity.ok(user);
-	}
-
 	@GetMapping("/profile/{userId}")
-	public ResponseEntity<User> getProfileById(@PathVariable int userId) {
+	public ResponseEntity<User> getProfileById(@PathVariable Integer userId) {
 		User user = authService.getUserById(userId);
 		return ResponseEntity.ok(user);
 	}
 
 	@PutMapping("/profile")
-	public ResponseEntity<User> updateProfile(@AuthenticationPrincipal String email,
+	public ResponseEntity<User> updateProfile(@AuthenticationPrincipal Integer userId,
 			@Valid @RequestBody UpdateProfileRequest request) {
 
-		User currentUser = authService.getUserByEmail(email);
-		User updated = authService.updateProfile(currentUser.getUserId(), request);
+		User updated = authService.updateProfile(userId, request);
 		return ResponseEntity.ok(updated);
 	}
 
 	@PutMapping("/password")
-	public ResponseEntity<Map<String, String>> changePassword(@AuthenticationPrincipal String email,
+	public ResponseEntity<Map<String, String>> changePassword(@AuthenticationPrincipal Integer userId,
 			@Valid @RequestBody ChangePasswordRequest request) {
-
-		User user = authService.getUserByEmail(email);
-		authService.changePassword(user.getUserId(), request.getNewPassword());
+		authService.changePassword(userId, request.getNewPassword());
 		return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
 	}
 
 	@DeleteMapping("/deactivate")
-	public ResponseEntity<Map<String, String>> deactivate(@AuthenticationPrincipal String email) {
-
-		User user = authService.getUserByEmail(email);
-		authService.deactivateAccount(user.getUserId());
+	public ResponseEntity<Map<String, String>> deactivate(@AuthenticationPrincipal Integer userId) {
+		authService.deactivateAccount(userId);
 		return ResponseEntity.ok(Map.of("message", "Account deactivated"));
 	}
 
 	@DeleteMapping("/admin/users/{userId}/deactivate")
 	@PreAuthorize("hasRole('ADMIN')")
-	public ResponseEntity<Map<String, String>> adminDeactivate(@PathVariable int userId) {
+	public ResponseEntity<Map<String, String>> adminDeactivate(@PathVariable Integer userId) {
 		authService.deactivateAccount(userId);
 		return ResponseEntity.ok(Map.of("message", "User " + userId + " deactivated"));
 	}

@@ -82,7 +82,7 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	@Transactional(readOnly = true)
 	public boolean validateToken(String token) {
-		return jwtUtil.validateToken(token);
+		return jwtUtil.validateToken(token);	
 	}
 
 	@Override
