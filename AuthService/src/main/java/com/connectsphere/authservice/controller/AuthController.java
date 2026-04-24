@@ -65,7 +65,7 @@ public class AuthController {
 	@PostMapping("/login")
 	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
 		AuthResponse auth = authService.login(request.getEmail(), request.getPassword());
-		setAuthCookies(response, refreshCookieName, accessCookieName);
+		setAuthCookies(response, auth.getAccessToken(), auth.getRefreshToken());
 		return ResponseEntity.ok(auth);
 	}
 
@@ -87,10 +87,6 @@ public class AuthController {
 			@RequestBody Map<String, String> body) {
 
 		String refreshToken = extractCookie(request, refreshCookieName);
-		if (refreshToken == null && body != null) {
-			refreshToken = body.get("refreshToken");
-		}
-
 		if (refreshToken == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "No refresh token provided"));
 		}
