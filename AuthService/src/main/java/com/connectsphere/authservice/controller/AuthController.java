@@ -65,7 +65,7 @@ public class AuthController {
 	@PostMapping("/login")
 	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
 		AuthResponse auth = authService.login(request.getEmail(), request.getPassword());
-		setAuthCookies(response, refreshCookieName, accessCookieName);
+		setAuthCookies(response, auth.getAccessToken(), auth.getRefreshToken());
 		return ResponseEntity.ok(auth);
 	}
 

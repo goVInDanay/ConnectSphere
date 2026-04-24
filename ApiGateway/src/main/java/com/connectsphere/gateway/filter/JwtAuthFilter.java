@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -25,6 +26,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 
 	private final JwtUtil jwtUtil;
 	private final AntPathMatcher matcher = new AntPathMatcher();
+	private static final String COOKIE_NAME = "cs_access_token";
 
 	public JwtAuthFilter(JwtUtil jwtUtil) {
 		super(Config.class);
@@ -66,7 +68,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 
 			ServerHttpRequest mutatedRequest = request.mutate().header("X-User-Id", userId).header("X-User-Role", role)
 					.header("X-User-Email", email).build();
-
+			System.out.println("GATEWAY COOKIES: " + exchange.getRequest().getCookies());
 			return chain.filter(exchange.mutate().request(mutatedRequest).build());
 		};
 	}
@@ -85,8 +87,19 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 	}
 
 	private String extractToken(ServerHttpRequest request) {
+
 		String header = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-		return (header != null && header.startsWith("Bearer ")) ? header.substring(7) : null;
+		if (header != null && header.startsWith("Bearer ")) {
+			return header.substring(7);
+		}
+		List<HttpCookie> cookies = request.getCookies().get(COOKIE_NAME);
+		if (cookies != null && !cookies.isEmpty()) {
+			String value = cookies.get(0).getValue();
+			log.debug("Gateway: reading token from cookie '{}'", COOKIE_NAME);
+			return value;
+		}
+
+		return null;
 	}
 
 	private Mono<Void> reject(ServerWebExchange exchange, HttpStatus status, String message) {
