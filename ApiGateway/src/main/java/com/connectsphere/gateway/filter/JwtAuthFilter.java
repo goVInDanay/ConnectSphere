@@ -68,7 +68,6 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 
 			ServerHttpRequest mutatedRequest = request.mutate().header("X-User-Id", userId).header("X-User-Role", role)
 					.header("X-User-Email", email).build();
-			System.out.println("GATEWAY COOKIES: " + exchange.getRequest().getCookies());
 			return chain.filter(exchange.mutate().request(mutatedRequest).build());
 		};
 	}
