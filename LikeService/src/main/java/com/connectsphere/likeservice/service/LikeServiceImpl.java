@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import com.connectsphere.likeservice.client.CommentServiceClient;
+import com.connectsphere.likeservice.client.PostServiceClient;
 import com.connectsphere.likeservice.entity.Like;
 import com.connectsphere.likeservice.exception.ResourceNotFoundException;
 import com.connectsphere.likeservice.repository.LikeRepository;
@@ -26,14 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 public class LikeServiceImpl implements LikeService {
 
 	private final LikeRepository likeRepository;
-	private final RestTemplate postServiceRestTemplate;
-	private final RestTemplate commentServiceRestTemplate;
-
-	@Value("${services.post-service.base-url:http://localhost:8082}")
-	private String postServiceBaseUrl;
-
-	@Value("${services.comment-service.base-url:http://localhost:8083}")
-	private String commentServiceBaseUrl;
+	private final PostServiceClient postServiceClient;
+	private final CommentServiceClient commentServiceClient;
 
 	@Override
 	public Like likeTarget(int userId, int targetId, String targetType, String reactionType) {
@@ -178,12 +174,10 @@ public class LikeServiceImpl implements LikeService {
 	private void incrementTargetCounter(int targetId, String targetType) {
 		try {
 			if (Like.TARGET_POST.equals(targetType)) {
-				String url = postServiceBaseUrl + "/api/posts/" + targetId + "/likes/inc";
-				postServiceRestTemplate.postForEntity(url, null, Void.class);
+				postServiceClient.incrementLikeCount(targetId);
 				log.debug("Post-Service likesCount incremented: postId={}", targetId);
 			} else if (Like.TARGET_COMMENT.equals(targetType)) {
-				String url = commentServiceBaseUrl + "/api/comments/" + targetId + "/like";
-				commentServiceRestTemplate.postForEntity(url, null, Void.class);
+				commentServiceClient.incrementCommentCount(targetId);
 				log.debug("Comment-Service likesCount incremented: commentId={}", targetId);
 			}
 		} catch (Exception ex) {
@@ -195,12 +189,10 @@ public class LikeServiceImpl implements LikeService {
 	private void decrementTargetCounter(int targetId, String targetType) {
 		try {
 			if (Like.TARGET_POST.equals(targetType)) {
-				String url = postServiceBaseUrl + "/api/posts/" + targetId + "/likes/dec";
-				postServiceRestTemplate.postForEntity(url, null, Void.class);
+				postServiceClient.decrementLikeCount(targetId);
 				log.debug("Post-Service likesCount decremented: postId={}", targetId);
 			} else if (Like.TARGET_COMMENT.equals(targetType)) {
-				String url = commentServiceBaseUrl + "/api/comments/" + targetId + "/unlike";
-				commentServiceRestTemplate.postForEntity(url, null, Void.class);
+				commentServiceClient.decrementCommentCount(targetId);
 				log.debug("Comment-Service likesCount decremented: commentId={}", targetId);
 			}
 		} catch (Exception ex) {
