@@ -49,14 +49,16 @@ public class MediaController {
 	}
 
 	@DeleteMapping("/media/{mediaId}")
-	public ResponseEntity<Map<String, String>> deleteMedia(@PathVariable int mediaId) {
-		mediaService.deleteMedia(mediaId);
+	public ResponseEntity<Map<String, String>> deleteMedia(@AuthenticationPrincipal int userId,
+			@PathVariable int mediaId) {
+		mediaService.deleteMedia(mediaId, userId);
 		return ResponseEntity.ok(Map.of("message", "Media deleted"));
 	}
 
 	@DeleteMapping("/media/post/{postId}")
-	public ResponseEntity<Map<String, String>> deleteMediaByPost(@PathVariable int postId) {
-		mediaService.deleteMediaByPost(postId);
+	public ResponseEntity<Map<String, String>> deleteMediaByPost(@AuthenticationPrincipal int userId,
+			@PathVariable int postId) {
+		mediaService.deleteMediaByPost(postId, userId);
 		return ResponseEntity.ok(Map.of("message", "All media for post " + postId + " deleted"));
 	}
 
@@ -85,8 +87,9 @@ public class MediaController {
 	}
 
 	@DeleteMapping("/stories/{storyId}")
-	public ResponseEntity<Map<String, String>> deleteStory(@PathVariable int storyId) {
-		mediaService.deleteStory(storyId);
+	public ResponseEntity<Map<String, String>> deleteStory(@AuthenticationPrincipal int userId,
+			@PathVariable int storyId) {
+		mediaService.deleteStory(storyId, userId);
 		return ResponseEntity.ok(Map.of("message", "Story deleted"));
 	}
 

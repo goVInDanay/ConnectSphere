@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
@@ -25,12 +26,13 @@ import lombok.ToString;
 		@Index(name = "idx_media_deleted", columnList = "deleteStatus") })
 @Getter
 @Setter
+@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @ToString
 @EqualsAndHashCode(of = "mediaId")
 public class Media {
-	
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int mediaId;
@@ -59,7 +61,6 @@ public class Media {
 
 	@Column(length = 225)
 	private String originalFileName;
-
 
 	@Column(nullable = false)
 	@Builder.Default

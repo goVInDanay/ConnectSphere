@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.connectsphere.media.clients.PostClient;
+import com.connectsphere.media.dto.PostDTO;
 import com.connectsphere.media.entity.Media;
 import com.connectsphere.media.entity.Story;
 import com.connectsphere.media.exception.InvalidMediaException;
@@ -33,6 +35,8 @@ public class MediaServiceImpl implements MediaService {
 	private final MediaRepository mediaRepository;
 	private final StoryRepository storyRepository;
 
+	private final PostClient postClient;
+
 	@Value("${file.upload-dir}")
 	private String uploadDir;
 
@@ -44,20 +48,31 @@ public class MediaServiceImpl implements MediaService {
 	@Override
 	public Media uploadMedia(MultipartFile file, int uploaderId, int linkedPostId) {
 		validateFile(file);
+		if (linkedPostId != 0) {
+			PostDTO post = postClient.getPostById(linkedPostId);
+
+			if (post == null) {
+				throw new ResourceNotFoundException("Post not found: " + linkedPostId);
+			}
+
+			if (post.getAuthorId() != uploaderId) {
+				throw new RuntimeException("You are not allowed to attach media to this post");
+			}
+		}
 
 		String extension = getExtension(file.getOriginalFilename());
 		String fileName = uploaderId + "/" + UUID.randomUUID() + "." + extension;
 		String mimeType = file.getContentType();
 
 		Path filePath = Paths.get(uploadDir, fileName);
-		String fileUrl = baseUrl + "/uploads/" + fileName;
+		String fileUrl = "/uploads/" + fileName;
 
 		try {
 			Files.createDirectories(filePath.getParent());
 			Files.write(filePath, file.getBytes());
 			log.info("File stored locally: {}", filePath);
 		} catch (Exception e) {
-			throw new RuntimeException("Local file storage failed " + e.getMessage(), e);
+			throw new InvalidMediaException("You are not allowed to delete this story");
 		}
 
 		Media media = Media.builder().uploaderId(uploaderId).url(fileUrl).filePath(fileName)
@@ -86,9 +101,12 @@ public class MediaServiceImpl implements MediaService {
 	}
 
 	@Override
-	public void deleteMedia(int mediaId) {
+	public void deleteMedia(int mediaId, int userId) {
 		Media media = mediaRepository.findByMediaIdAndDeleteStatusFalse(mediaId)
 				.orElseThrow(() -> new ResourceNotFoundException("Media Not Found: " + mediaId));
+		if (media.getUploaderId() != userId) {
+			throw new InvalidMediaException("You are not allowed to delete this media");
+		}
 		try {
 			Path filePath = Paths.get(uploadDir, media.getFilePath());
 			Files.deleteIfExists(filePath);
@@ -100,8 +118,17 @@ public class MediaServiceImpl implements MediaService {
 	}
 
 	@Override
-	public void deleteMediaByPost(int postId) {
+	public void deleteMediaByPost(int postId, int userId) {
 		List<Media> mediaList = mediaRepository.findByLinkedPostIdAndDeleteStatusFalse(postId);
+		PostDTO post;
+		try {
+			post = postClient.getPostById(postId);
+		} catch (Exception e) {
+			throw new ResourceNotFoundException("Post not found: " + postId);
+		}
+		if (post.getAuthorId() != userId) {
+			throw new InvalidMediaException("Not allowed to delete media of this post");
+		}
 		for (Media media : mediaList) {
 			try {
 				Path filePath = Paths.get(uploadDir, media.getFilePath());
@@ -146,9 +173,12 @@ public class MediaServiceImpl implements MediaService {
 	}
 
 	@Override
-	public void deleteStory(int storyId) {
+	public void deleteStory(int storyId, int userId) {
 		Story story = storyRepository.findByStoryIdAndActiveStatusTrue(storyId)
 				.orElseThrow(() -> new ResourceNotFoundException("Story not found: " + storyId));
+		if (story.getAuthorId() != userId) {
+			throw new InvalidMediaException("You are not allowed to delete this story");
+		}
 		story.setActiveStatus(false);
 		storyRepository.save(story);
 	}

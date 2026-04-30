@@ -2,6 +2,7 @@ package com.connectsphere.media.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,10 +22,11 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth
-				.requestMatchers("/api/media/upload", "/api/media/**", "/api/stories/upload", "/api/stories/**")
-				.authenticated()
-				.requestMatchers("/api/post/**", "/api/media/*", "/api/stories/feed", "/api/stories/*",
-						"/api/stories/user/**", "/uploads/**")
+				.requestMatchers(HttpMethod.POST, "/api/media/**").authenticated()
+				.requestMatchers(HttpMethod.DELETE, "/api/media/**").authenticated()
+				.requestMatchers(HttpMethod.POST, "/api/stories/**").authenticated()
+				.requestMatchers(HttpMethod.DELETE, "/api/stories/**").authenticated()
+				.requestMatchers(HttpMethod.GET, "/api/post/**", "/api/media/**", "/api/stories/**", "/uploads/**")
 				.permitAll()
 				.requestMatchers("/swagger-ui/**", "/api/swagger-ui/**", "/api/swagger-ui.html", "/v3/api-docs/**",
 						"/v3/api-docs", "/webjars/**", "/swagger-resources/**", "/configuration/**")

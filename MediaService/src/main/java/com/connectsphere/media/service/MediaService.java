@@ -14,9 +14,9 @@ public interface MediaService {
 
 	Media getMediaById(int mediaId);
 
-	void deleteMedia(int mediaId);
+	void deleteMedia(int mediaId, int userId);
 
-	void deleteMediaByPost(int postId);
+	void deleteMediaByPost(int postId, int userId);
 
 	Story createStory(MultipartFile file, int authorId, String caption);
 
@@ -24,7 +24,7 @@ public interface MediaService {
 
 	Story viewStory(int storyId);
 
-	void deleteStory(int storyId);
+	void deleteStory(int storyId, int userId);
 
 	List<Story> getStoriesByUser(int userId);
 
