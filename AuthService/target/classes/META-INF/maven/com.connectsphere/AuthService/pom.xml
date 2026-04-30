@@ -122,6 +122,12 @@
             <scope>test</scope>
         </dependency>
 
+        <!--Rabbit MQ-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- Security testing -->
         <dependency>
             <groupId>org.springframework.security</groupId>
