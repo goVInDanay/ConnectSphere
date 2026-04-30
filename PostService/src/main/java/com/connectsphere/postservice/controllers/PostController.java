@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.connectsphere.postservice.dto.ChangeVisibilityRequest;
 import com.connectsphere.postservice.dto.CreatePostRequest;
 import com.connectsphere.postservice.dto.FeedRequest;
+import com.connectsphere.postservice.dto.PostResponse;
 import com.connectsphere.postservice.dto.UpdatePostRequest;
 import com.connectsphere.postservice.entity.Post;
 import com.connectsphere.postservice.service.PostService;
@@ -47,8 +48,10 @@ public class PostController {
 	}
 
 	@GetMapping("/{postId}")
-	public ResponseEntity<Post> getPostById(@PathVariable int postId) {
-		return postService.getPostById(postId).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+	public ResponseEntity<PostResponse> getPostById(@PathVariable int postId) {
+		Post post = postService.getPostById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+
+		return ResponseEntity.ok(new PostResponse(post.getPostId(), post.getAuthorId()));
 	}
 
 	@GetMapping("/user/{userId}")
@@ -68,6 +71,7 @@ public class PostController {
 
 	@GetMapping("/search")
 	public ResponseEntity<List<Post>> searchPosts(@RequestParam("q") String term) {
+		log.info("Search api hit");
 		List<Post> results = postService.searchPosts(term);
 		return ResponseEntity.ok(results);
 	}

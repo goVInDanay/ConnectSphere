@@ -25,15 +25,17 @@ public class SecurityConfig {
 
 	@Bean
 	WebSecurityCustomizer webSecurityCustomizer() {
-		return web -> web.ignoring().requestMatchers("/swagger-ui/**","/api/swagger-ui/**", "/api/swagger-ui.html", "/v3/api-docs/**",
-				"/v3/api-docs", "/webjars/**", "/swagger-resources/**", "/configuration/**");
+		return web -> web.ignoring().requestMatchers("/swagger-ui/**", "/api/swagger-ui/**", "/api/swagger-ui.html",
+				"/v3/api-docs/**", "/v3/api-docs", "/webjars/**", "/swagger-resources/**", "/configuration/**");
 	}
 
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.GET, "/api/posts/search").permitAll()
+				.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.GET, "/api/posts/search/**").permitAll()
+						.requestMatchers("/api/posts/search").permitAll()
+						 .requestMatchers("/api/posts/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/posts/{postId}").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/posts/user/{userId}").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/posts/user/{userId}/count").permitAll().anyRequest()
