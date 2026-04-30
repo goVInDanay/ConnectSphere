@@ -2,11 +2,10 @@ package com.connectsphere.commentservice.service;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
+import com.connectsphere.commentservice.client.PostServiceClient;
 import com.connectsphere.commentservice.dto.CreateCommentRequest;
 import com.connectsphere.commentservice.entity.Comment;
 import com.connectsphere.commentservice.exception.ResourceNotFoundException;
@@ -22,10 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CommentServiceImpl implements CommentService {
 
 	private final CommentRepository commentRepository;
-	private final RestTemplate postServiceRestTemplate;
-
-	@Value("${services.post-service.base-url:http://localhost:8082}")
-	private String postServiceBaseUrl;
+	private final PostServiceClient postServiceClient;
 
 	@Override
 	public Comment addComment(CreateCommentRequest request) {
@@ -146,8 +142,7 @@ public class CommentServiceImpl implements CommentService {
 
 	private void incrementPostCommentCount(int postId) {
 		try {
-			String url = postServiceBaseUrl + "/api/posts/" + postId + "/comments/inc";
-			postServiceRestTemplate.postForEntity(url, null, Void.class);
+			postServiceClient.incrementCommentCount(postId);
 			log.debug("Post-Service commentsCount incremented for postId={}", postId);
 		} catch (Exception ex) {
 			log.error("Failed to increment commentsCount for postId={}: {}", postId, ex.getMessage());
@@ -156,8 +151,7 @@ public class CommentServiceImpl implements CommentService {
 
 	private void decrementPostCommentCount(int postId) {
 		try {
-			String url = postServiceBaseUrl + "/api/posts/" + postId + "/comments/dec";
-			postServiceRestTemplate.postForEntity(url, null, Void.class);
+			postServiceClient.decrementCommentCount(postId);
 			log.debug("Post-Service commentsCount decremented for postId={}", postId);
 		} catch (Exception ex) {
 			log.error("Failed to decrement commentsCount for postId={}: {}", postId, ex.getMessage());

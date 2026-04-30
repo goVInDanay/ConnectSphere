@@ -20,11 +20,15 @@ public class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth.requestMatchers("/api/comments/**")
+		return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth
+				.requestMatchers("/api/comments/post/**", "/api/comments/*/replies", "/api/comments/user/**",
+						"/api/comments/*", "/api/comments/post/*/count")
+				.permitAll().requestMatchers("/api/comments", // POST
+						"/api/comments/*/replies", "/api/comments/*", "/api/comments/*/like", "/api/comments/*/unlike")
 				.authenticated()
 				.requestMatchers("/swagger-ui/**", "/api/swagger-ui/**", "/api/swagger-ui.html", "/v3/api-docs/**",
 						"/v3/api-docs", "/webjars/**", "/swagger-resources/**", "/configuration/**")
-				.permitAll().anyRequest().permitAll())
+				.permitAll().anyRequest().authenticated())
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).build();
 	}
 }
