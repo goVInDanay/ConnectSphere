@@ -10,7 +10,7 @@ public interface NotificationService {
 
 	void sendBulkNotifications(List<Integer> recipientIds, String type, String message);
 
-	void markAsRead(int notificationId);
+	void markAsRead(int userId, int notificationId);
 
 	void markAllRead(int recipientId);
 
@@ -18,7 +18,7 @@ public interface NotificationService {
 
 	int getUnreadCount(int recipientId);
 
-	void deleteNotification(int notificationId);
+	void deleteNotification(int userId, int notificationId);
 
 	void sendEmailAlert(Notification notification, String recipientEmail);
 }

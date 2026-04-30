@@ -84,8 +84,16 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
-	public void markAsRead(int notificationId) {
-		notificationRepository.markAsReadById(notificationId);
+	public void markAsRead(int userId, int notificationId) {
+		Notification notification = notificationRepository.findByNotificationId(notificationId)
+				.orElseThrow(() -> new RuntimeException("Notification not found"));
+
+		if (notification.getRecipientId() != userId) {
+			throw new RuntimeException("Unauthorized access to notification");
+		}
+
+		notification.setReadStatus(true);
+		notificationRepository.save(notification);
 		log.debug("Notification marked read: id={}", notificationId);
 	}
 
@@ -109,8 +117,16 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
-	public void deleteNotification(int notificationId) {
-		notificationRepository.deleteByNotificationId(notificationId);
+	public void deleteNotification(int userId, int notificationId) {
+		Notification notification = notificationRepository.findByNotificationId(notificationId)
+				.orElseThrow(() -> new RuntimeException("Notification not found"));
+
+		if (notification.getRecipientId() != userId) {
+			throw new RuntimeException("Unauthorized delete attempt");
+		}
+
+		notificationRepository.delete(notification);
+
 		log.info("Notification deleted: id={}", notificationId);
 
 	}

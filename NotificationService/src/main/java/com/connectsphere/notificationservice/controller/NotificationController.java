@@ -62,8 +62,8 @@ public class NotificationController {
 	}
 
 	@PostMapping("/{id}/read")
-	public ResponseEntity<Map<String, String>> markAsRead(@PathVariable int id) {
-		notificationService.markAsRead(id);
+	public ResponseEntity<Map<String, String>> markAsRead(@AuthenticationPrincipal int userId, @PathVariable int id) {
+		notificationService.markAsRead(userId, id);
 		return ResponseEntity.ok(Map.of("message", "Notifications marked as read"));
 	}
 
@@ -74,8 +74,9 @@ public class NotificationController {
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Map<String, String>> deleteNotification(@PathVariable int id) {
-		notificationService.deleteNotification(id);
+	public ResponseEntity<Map<String, String>> deleteNotification(@AuthenticationPrincipal int userId,
+			@PathVariable int id) {
+		notificationService.deleteNotification(userId, id);
 		return ResponseEntity.ok(Map.of("message", "Notification deleted"));
 	}
 }
