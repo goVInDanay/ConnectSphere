@@ -130,4 +130,10 @@ public class PostController {
 		postService.decrementComments(postId);
 		return ResponseEntity.noContent().build();
 	}
+
+	@GetMapping("/{postId}/author")
+	public ResponseEntity<Integer> getPostAuthor(@PathVariable int postId) {
+		Post post = postService.getPostById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+		return ResponseEntity.ok(post.getAuthorId());
+	}
 }

@@ -1,13 +1,18 @@
 package com.connectsphere.postservice.service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.connectsphere.postservice.clients.SearchClient;
 import com.connectsphere.postservice.dto.CreatePostRequest;
 import com.connectsphere.postservice.dto.UpdatePostRequest;
 import com.connectsphere.postservice.entity.Post;
@@ -24,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PostServiceImpl implements PostService {
 
 	private final PostRepository postRepository;
+	private final SearchClient searchClient;
 
 	@Override
 	public Post createPost(CreatePostRequest request) {
@@ -57,12 +63,41 @@ public class PostServiceImpl implements PostService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<Post> getFeedForUser(int userId, List<Integer> followeeIds) {
+		log.debug("Generating feed for user={}", userId);
+		List<Post> feed = new ArrayList<>();
+
 		if (CollectionUtils.isEmpty(followeeIds)) {
-			log.debug("User {} has no followees — returning empty feed", userId);
-			return new ArrayList<>();
+			List<Post> followeePosts = postRepository.findFeedByUserIds(followeeIds);
+			feed.addAll(followeePosts);
 		}
-		log.debug("Generating feed for userId={} from {} followees", userId, followeeIds.size());
-		return postRepository.findFeedByUserIds(followeeIds);
+
+		List<Integer> trendingPostIds = searchClient.getTrendingPostIds(20);
+
+		if (trendingPostIds != null && !trendingPostIds.isEmpty()) {
+			feed.addAll(postRepository.findAllById(trendingPostIds));
+		}
+
+		feed.addAll(postRepository.findByVisibilityAndIsDeletedFalseOrderByCreatedAtDesc("PUBLIC"));
+
+		Map<Integer, Post> unique = new LinkedHashMap<>();
+		for (Post p : feed) {
+			if (!p.isDeleted()) {
+				unique.put(p.getPostId(), p);
+			}
+		}
+		List<Post> finalFeed = new ArrayList<>(unique.values());
+
+		finalFeed.sort((p1, p2) -> {
+			long hours1 = Duration.between(p1.getCreatedAt(), LocalDateTime.now()).toHours();
+			long hours2 = Duration.between(p2.getCreatedAt(), LocalDateTime.now()).toHours();
+
+			double score1 = (p1.getLikesCount() * 2 + p1.getCommentsCount() * 3) / (hours1 + 1.0);
+			double score2 = (p2.getLikesCount() * 2 + p2.getCommentsCount() * 3) / (hours2 + 1.0);
+
+			return Double.compare(score2, score1);
+		});
+
+		return finalFeed.stream().limit(50).toList();
 	}
 
 	@Override
