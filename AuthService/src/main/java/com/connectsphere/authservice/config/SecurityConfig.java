@@ -38,7 +38,7 @@ public class SecurityConfig {
 								"/v3/api-docs/**", "/v3/api-docs", "/webjars/**", "/swagger-resources/**",
 								"/configuration/**", "/api/auth/register", "/api/auth/login", "/api/auth/refresh",
 								"/oauth2/**", "/login/oauth2/**")
-						.permitAll().requestMatchers("/api/auth/search/**", "/api/users/{userId}/profile").permitAll()
+						.permitAll().requestMatchers("/api/auth/search/**", "/api/users/{userId}/profile", "/api/auth/{id}/email", "api/auth/profile/{userId}").permitAll()
 						.requestMatchers("/api/admin/**").hasRole("ADMIN").anyRequest().authenticated())
 //				.oauth2Login(oauth2 -> oauth2.defaultSuccessUrl("/oauth2/callback", true))
 				.oauth2Login(oauth2 -> oauth2.disable())

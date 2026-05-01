@@ -140,6 +140,12 @@ public class AuthController {
 		return ResponseEntity.ok(results);
 	}
 
+	@GetMapping("/{id}/email")
+	public ResponseEntity<Map<String, String>> getEmail(@PathVariable int id) {
+		User user = authService.getUserById(id);
+		return ResponseEntity.ok(Map.of("email", user.getEmail()));
+	}
+
 	private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
 		response.addCookie(buildCookie(accessCookieName, accessToken, accessTokenExpiryMs / 1000));
 		response.addCookie(buildCookie(refreshCookieName, refreshToken, refreshTokenExpiryMs / 1000));

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.connectsphere.authservice.dto.AuthResponse;
+import com.connectsphere.authservice.dto.CreateNotificationRequest;
 import com.connectsphere.authservice.dto.RegisterRequest;
 import com.connectsphere.authservice.dto.UpdateProfileRequest;
 import com.connectsphere.authservice.dto.UserSummary;
@@ -14,6 +15,7 @@ import com.connectsphere.authservice.entities.User;
 import com.connectsphere.authservice.exceptions.DuplicateResourceException;
 import com.connectsphere.authservice.exceptions.InvalidCredentialsException;
 import com.connectsphere.authservice.exceptions.ResourceNotFoundException;
+import com.connectsphere.authservice.messaging.NotificationProducer;
 import com.connectsphere.authservice.repository.UserRepository;
 import com.connectsphere.authservice.util.JwtUtil;
 
@@ -29,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtUtil jwtUtil;
+	private final NotificationProducer notificationProducer;
 
 	@Override
 	public User register(RegisterRequest request) {
@@ -47,6 +50,17 @@ public class AuthServiceImpl implements AuthService {
 				.role("ROLE_USER").provider("local").isActive(true).build();
 		User saved = userRepository.save(user);
 		log.info("User registered successfully: userId={}", saved.getUserId());
+		try {
+			CreateNotificationRequest notification = CreateNotificationRequest.builder().recipientId(saved.getUserId())
+					.actorId(saved.getUserId()).type("ACCOUNT_ACTION").message("Welcome to ConnectSphere 🎉")
+					.targetId(saved.getUserId()).targetType("USER").deepLinkUrl("/profile/" + saved.getUserId())
+					.build();
+
+			notificationProducer.sendNotification(notification);
+
+		} catch (Exception ex) {
+			log.error("Failed to send welcome notification: {}", ex.getMessage());
+		}
 		return saved;
 	}
 
@@ -82,7 +96,7 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	@Transactional(readOnly = true)
 	public boolean validateToken(String token) {
-		return jwtUtil.validateToken(token);	
+		return jwtUtil.validateToken(token);
 	}
 
 	@Override
