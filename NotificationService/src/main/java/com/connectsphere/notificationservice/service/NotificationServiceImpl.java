@@ -10,7 +10,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.connectsphere.notificationservice.NotificationServiceApplication;
+import com.connectsphere.notificationservice.client.UserClient;
 import com.connectsphere.notificationservice.dto.CreateNotificationRequest;
 import com.connectsphere.notificationservice.entity.Notification;
 import com.connectsphere.notificationservice.repository.NotificationRepository;
@@ -26,6 +26,7 @@ public class NotificationServiceImpl implements NotificationService {
 
 	private final NotificationRepository notificationRepository;
 	private final JavaMailSender mailSender;
+	private final UserClient userClient;
 
 	@Value("${app.mail.from:noreply@connectsphere.com}")
 	private String fromEmail;
@@ -42,7 +43,7 @@ public class NotificationServiceImpl implements NotificationService {
 
 		if (request.getTargetId() > 0) {
 			boolean duplicate = notificationRepository
-					.findByActorIdAndTargetIdAndType(request.getActorId(), request.getTargetId(), request.getType())
+					.findByActorIdAndTargetIdAndType(request.getRecipientId(), request.getTargetId(), request.getType())
 					.isPresent();
 			if (duplicate) {
 				log.debug("Duplicate notification skipped: actor={}, target={}, type={}", request.getActorId(),
@@ -57,11 +58,20 @@ public class NotificationServiceImpl implements NotificationService {
 				.deepLinkUrl(request.getDeepLinkUrl()).readStatus(false).build();
 
 		Notification saved = notificationRepository.save(notification);
+		String email = null;
+
+		try {
+			email = userClient.getUserEmail(request.getRecipientId()).getEmail();
+		} catch (Exception e) {
+			log.warn("Failed to fetch email for userId={}", request.getRecipientId());
+		}
 		log.info("Notification created : id={}, recipient={} type={}", saved.getNotificationId(),
 				saved.getRecipientId(), saved.getType());
-
-		if (saved.isHighPriority() && request.getRecipientEmail() != null) {
-			sendEmailAlert(notification, request.getRecipientEmail());
+		if (saved.isHighPriority() && email != null && !email.isBlank() && email.contains("@")) {
+			log.info("Sending email");
+			sendEmailAlert(notification, email);
+		} else {
+			log.warn("Skipping email, invalid recipient: {}", email);
 		}
 
 		return saved;
@@ -134,6 +144,7 @@ public class NotificationServiceImpl implements NotificationService {
 	@Override
 	public void sendEmailAlert(Notification notification, String recipientEmail) {
 		try {
+
 			SimpleMailMessage mail = new SimpleMailMessage();
 			mail.setFrom(fromEmail);
 			mail.setTo(recipientEmail);
