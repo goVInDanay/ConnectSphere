@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.connectsphere.follow.dto.CreateNotificationRequest;
 import com.connectsphere.follow.entity.Follows;
 import com.connectsphere.follow.messaging.NotificationProducer;
@@ -34,6 +33,9 @@ public class FollowServiceImpl implements FollowService {
 					.build();
 			try {
 				Follows saved = followRepository.save(edge);
+				notificationProducer.sendNotification(CreateNotificationRequest.builder().recipientId(followeeId)
+						.actorId(followerId).type("FOLLOW").message("started following you").targetId(followerId)
+						.targetType("USER").deepLinkUrl("/profile/" + followerId).build());
 				log.info("Follow created {} -> {}", followerId, followeeId);
 				return saved;
 			} catch (DataIntegrityViolationException e) {
