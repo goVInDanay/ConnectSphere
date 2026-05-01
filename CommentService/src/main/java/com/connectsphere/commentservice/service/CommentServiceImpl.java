@@ -7,8 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.connectsphere.commentservice.client.PostServiceClient;
 import com.connectsphere.commentservice.dto.CreateCommentRequest;
+import com.connectsphere.commentservice.dto.CreateNotificationRequest;
 import com.connectsphere.commentservice.entity.Comment;
 import com.connectsphere.commentservice.exception.ResourceNotFoundException;
+import com.connectsphere.commentservice.messaging.NotificationProducer;
 import com.connectsphere.commentservice.repository.CommentRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -22,19 +24,28 @@ public class CommentServiceImpl implements CommentService {
 
 	private final CommentRepository commentRepository;
 	private final PostServiceClient postServiceClient;
+	private final NotificationProducer notificationProducer;
 
 	@Override
 	public Comment addComment(CreateCommentRequest request) {
 		log.info("Adding top-level comment: postId={}, authorId={}", request.getPostId(), request.getAuthorId());
 
 		Comment comment = Comment.builder().postId(request.getPostId()).authorId(request.getAuthorId())
-				.content(request.getContent()).parentCommentId(null)
-				.likesCount(0).isDeleted(false).build();
+				.content(request.getContent()).parentCommentId(null).likesCount(0).isDeleted(false).build();
 
 		Comment saved = commentRepository.save(comment);
 		log.info("Comment saved: commentId={}", saved.getCommentId());
+		Integer postOwnerId = postServiceClient.getPostOwnerId(request.getPostId());
 		incrementPostCommentCount(request.getPostId());
+		if (!postOwnerId.equals(request.getAuthorId())) {
 
+			CreateNotificationRequest notification = CreateNotificationRequest.builder().recipientId(postOwnerId)
+					.actorId(request.getAuthorId()).type("COMMENT").message("Commented on your post")
+					.targetId(request.getPostId()).targetType("POST").deepLinkUrl("/post/" + request.getPostId())
+					.build();
+
+			notificationProducer.sendNotification(notification);
+		}
 		return saved;
 	}
 
@@ -55,6 +66,16 @@ public class CommentServiceImpl implements CommentService {
 		log.info("Reply saved: commentId={}, parentCommentId={}", saved.getCommentId(), parentCommentId);
 
 		incrementPostCommentCount(parent.getPostId());
+
+		if (parent.getAuthorId() != request.getAuthorId()) {
+
+			CreateNotificationRequest notification = CreateNotificationRequest.builder()
+					.recipientId(parent.getAuthorId()).actorId(request.getAuthorId()).type("REPLY")
+					.message("replied to your comment").targetId(parentCommentId).targetType("COMMENT")
+					.deepLinkUrl("/post/" + parent.getPostId()).build();
+
+			notificationProducer.sendNotification(notification);
+		}
 
 		return saved;
 	}
