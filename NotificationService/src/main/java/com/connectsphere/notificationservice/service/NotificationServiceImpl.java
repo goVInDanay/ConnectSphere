@@ -43,7 +43,7 @@ public class NotificationServiceImpl implements NotificationService {
 
 		if (request.getTargetId() > 0) {
 			boolean duplicate = notificationRepository
-					.findByActorIdAndTargetIdAndType(request.getRecipientId(), request.getTargetId(), request.getType())
+					.findByActorIdAndTargetIdAndType(request.getActorId(), request.getTargetId(), request.getType())
 					.isPresent();
 			if (duplicate) {
 				log.debug("Duplicate notification skipped: actor={}, target={}, type={}", request.getActorId(),
@@ -69,7 +69,7 @@ public class NotificationServiceImpl implements NotificationService {
 				saved.getRecipientId(), saved.getType());
 		if (saved.isHighPriority() && email != null && !email.isBlank() && email.contains("@")) {
 			log.info("Sending email");
-			sendEmailAlert(notification, email);
+			sendEmailAlert(saved, email);
 		} else {
 			log.warn("Skipping email, invalid recipient: {}", email);
 		}
@@ -158,7 +158,7 @@ public class NotificationServiceImpl implements NotificationService {
 		}
 	}
 
-	private String buildEmailBody(Notification notification) {
+	private String buildEmailSubject(Notification notification) {
 		return switch (notification.getType()) {
 		case Notification.TYPE_FOLLOW -> "You have a new follower on ConnectSphere";
 		case Notification.TYPE_ACCOUNT_ACTION -> "Important: Account changes on ConnectSphere";
@@ -166,7 +166,7 @@ public class NotificationServiceImpl implements NotificationService {
 		};
 	}
 
-	private String buildEmailSubject(Notification notification) {
+	private String buildEmailBody(Notification notification) {
 		String link = (notification.getDeepLinkUrl() != null) ? frontendBaseUrl + notification.getDeepLinkUrl()
 				: frontendBaseUrl;
 		return notification.getMessage() + "\n\n View it here: " + link;
