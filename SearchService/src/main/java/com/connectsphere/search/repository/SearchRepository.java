@@ -32,4 +32,7 @@ public interface SearchRepository extends JpaRepository<PostHashtag, Integer> {
 	int countPostsByHashtag(@Param("tag") String tag);
 
 	boolean existsByPostIdAndHashtagTag(int postId, String tag);
+
+	@Query("SELECT ph.postId FROM PostHashtag ph WHERE ph.hashtag.tag IN :tags ORDER BY ph.createdAt DESC")
+	List<Integer> findPostIdsByHashtags(@Param("tags") List<String> tags);
 }

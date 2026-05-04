@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.connectsphere.search.dto.HashtagDTO;
 import com.connectsphere.search.entity.Hashtag;
 import com.connectsphere.search.service.SearchService;
 
@@ -56,8 +57,10 @@ public class SearchController {
 	}
 
 	@GetMapping("/api/hashtags/trending")
-	public ResponseEntity<List<Hashtag>> getTrendingHashtags(@RequestParam(defaultValue = "20") int limit) {
-		return ResponseEntity.ok(searchService.getTrendingHashtags(limit));
+	public ResponseEntity<List<HashtagDTO>> getTrendingHashtags(@RequestParam(defaultValue = "20") int limit) {
+		List<HashtagDTO> result = searchService.getTrendingHashtags(limit).stream()
+				.map(h -> new HashtagDTO(h.getTag(), h.getPostCount())).toList();
+		return ResponseEntity.ok(result);
 	}
 
 	@GetMapping("/api/hashtags/{tag}/posts")
@@ -79,5 +82,11 @@ public class SearchController {
 	@GetMapping("/api/hashtags/search")
 	public ResponseEntity<List<Hashtag>> searchHashtags(@RequestParam("q") String term) {
 		return ResponseEntity.ok(searchService.searchHashtags(term));
+	}
+
+	@GetMapping("/api/hashtags/trending/post-ids")
+	public ResponseEntity<List<Integer>> getTrendingPostIds(@RequestParam(defaultValue = "20") int limit) {
+
+		return ResponseEntity.ok(searchService.getTrendingPostIds(limit));
 	}
 }

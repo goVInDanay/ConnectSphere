@@ -138,6 +138,15 @@ public class SearchServiceImpl implements SearchService {
 		return hashtagRepository.findByTag(normaliseTag(tag)).map(Hashtag::getPostCount).orElse(0);
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<Integer> getTrendingPostIds(int limit) {
+		List<Hashtag> trendingTags = searchRepository.findTrendingHashtags(PageRequest.of(0, limit));
+		List<String> tags = trendingTags.stream().map(Hashtag::getTag).toList();
+		List<Integer> postIds = searchRepository.findPostIdsByHashtags(tags);
+		return postIds.stream().distinct().limit(limit * 2).toList();
+	}
+
 	private Set<String> extractTags(String content) {
 		Set<String> tags = new LinkedHashSet<>();
 		Matcher m = HASHTAG_PATTERN.matcher(content);

@@ -22,4 +22,6 @@ public interface SearchService {
 	List<Hashtag> searchHashtags(String term);
 
 	int getHashtagCount(String tag);
+
+	List<Integer> getTrendingPostIds(int limit);
 }
