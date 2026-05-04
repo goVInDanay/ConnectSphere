@@ -29,4 +29,6 @@ public interface AuthService {
 	void deactivateAccount(int userId);
 
 	List<User> searchUsers(String term);
+	
+	List<User> getUsersByUsernames(List<String> usernames);
 }

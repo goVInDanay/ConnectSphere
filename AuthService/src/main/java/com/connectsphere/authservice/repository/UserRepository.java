@@ -34,4 +34,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 	Optional<User> findByProviderAndProviderId(String provider, String providerId);
 
 	List<User> findAllByRole(String role);
+
+	@Query("SELECT u FROM User u WHERE LOWER(u.username) IN :usernames")
+	List<User> findByUsernameIn(@Param("usernames") List<String> usernames);
 }

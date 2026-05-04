@@ -146,6 +146,13 @@ public class AuthController {
 		return ResponseEntity.ok(Map.of("email", user.getEmail()));
 	}
 
+	@GetMapping("/username")
+	public ResponseEntity<List<User>> getUsersByUsernames(@RequestParam List<String> usernames) {
+
+		List<User> users = authService.getUsersByUsernames(usernames);
+		return ResponseEntity.ok(users);
+	}
+
 	private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
 		response.addCookie(buildCookie(accessCookieName, accessToken, accessTokenExpiryMs / 1000));
 		response.addCookie(buildCookie(refreshCookieName, refreshToken, refreshTokenExpiryMs / 1000));

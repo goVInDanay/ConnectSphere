@@ -127,6 +127,16 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public List<User> getUsersByUsernames(List<String> usernames) {
+		if (usernames == null || usernames.isEmpty()) {
+			return List.of();
+		}
+		List<String> uniqueUsernames = usernames.stream().map(String::toLowerCase).distinct().toList();
+		return userRepository.findByUsernameIn(uniqueUsernames);
+	}
+
+	@Override
 	public User updateProfile(int userId, UpdateProfileRequest request) {
 		User user = getUserById(userId);
 
