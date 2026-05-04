@@ -3,20 +3,30 @@ package com.connectsphere.postservice.service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import com.connectsphere.postservice.clients.SearchClient;
+import com.connectsphere.postservice.clients.UserClient;
+import com.connectsphere.postservice.dto.CreateNotificationRequest;
 import com.connectsphere.postservice.dto.CreatePostRequest;
 import com.connectsphere.postservice.dto.UpdatePostRequest;
+import com.connectsphere.postservice.dto.UserDTO;
+import com.connectsphere.postservice.entity.Mention;
 import com.connectsphere.postservice.entity.Post;
 import com.connectsphere.postservice.exceptions.PostNotFoundException;
+import com.connectsphere.postservice.messaging.NotificationProducer;
+import com.connectsphere.postservice.repository.MentionRepository;
 import com.connectsphere.postservice.repository.PostRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -29,7 +39,12 @@ import lombok.extern.slf4j.Slf4j;
 public class PostServiceImpl implements PostService {
 
 	private final PostRepository postRepository;
+	private final MentionRepository mentionRepository;
 	private final SearchClient searchClient;
+	private final UserClient userClient;
+	private final NotificationProducer notificationProducer;
+
+	private static final Pattern MENTION_PATTERN = Pattern.compile("@(\\w+)");
 
 	@Override
 	public Post createPost(CreatePostRequest request) {
@@ -41,8 +56,27 @@ public class PostServiceImpl implements PostService {
 				.mediaUrls(request.getMediaUrls() != null ? request.getMediaUrls() : new ArrayList<>())
 				.postType(resolvedType).visibility(request.getVisibility() != null ? request.getVisibility() : "PUBLIC")
 				.likesCount(0).commentsCount(0).sharesCount(0).isDeleted(false).build();
-
+		Set<String> usernames = new HashSet<>(extractMentions(post.getContent()));
 		Post saved = postRepository.save(post);
+		if (!usernames.isEmpty()) {
+			List<UserDTO> users = userClient.getUsersByUsernames(new ArrayList<>(usernames));
+			List<Mention> mentions = new ArrayList<>();
+			for (UserDTO user : users) {
+				if (user.getUserId() == saved.getAuthorId()) {
+					continue;
+				}
+				Mention mention = new Mention();
+				mention.setPostId(saved.getPostId());
+				mention.setMentionedUserId(user.getUserId());
+				mentions.add(mention);
+				CreateNotificationRequest notification = CreateNotificationRequest.builder()
+						.recipientId(user.getUserId()).actorId(saved.getAuthorId()).type("MENTION")
+						.message("You were mentioned in a post").targetId(saved.getPostId()).targetType("POST")
+						.deepLinkUrl("/posts/" + saved.getPostId()).build();
+				notificationProducer.sendNotification(notification);
+			}
+			mentionRepository.saveAll(mentions);
+		}
 		log.info("Post created: postId={}, authorId={}, visibility={}", saved.getPostId(), saved.getAuthorId(),
 				saved.getVisibility());
 		return saved;
@@ -195,5 +229,16 @@ public class PostServiceImpl implements PostService {
 		if (hasVideo)
 			return "VIDEO";
 		return "IMAGE";
+	}
+
+	private List<String> extractMentions(String content) {
+		List<String> usernames = new ArrayList<>();
+		Matcher matcher = MENTION_PATTERN.matcher(content);
+
+		while (matcher.find()) {
+			usernames.add(matcher.group(1));
+		}
+
+		return usernames;
 	}
 }
