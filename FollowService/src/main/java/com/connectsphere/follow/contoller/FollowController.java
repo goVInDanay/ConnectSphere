@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.connectsphere.follow.entity.Follows;
@@ -63,6 +64,11 @@ public class FollowController {
 	public ResponseEntity<Map<String, Boolean>> isFollowing(@AuthenticationPrincipal int userId,
 			@PathVariable int followeeId) {
 		return ResponseEntity.ok(Map.of("isFollowing", followService.isFollowing(userId, followeeId)));
+	}
+
+	@GetMapping("/is-following")
+	public ResponseEntity<Boolean> isFollowingInternal(@RequestParam int followerId, @RequestParam int followeeId) {
+		return ResponseEntity.ok(followService.isFollowing(followerId, followeeId));
 	}
 
 	@GetMapping("/mutual")
