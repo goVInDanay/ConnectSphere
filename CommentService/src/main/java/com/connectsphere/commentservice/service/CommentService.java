@@ -28,4 +28,16 @@ public interface CommentService {
 	void unlikeComment(int commentId);
 
 	int getCommentCount(int postId);
+
+	List<Comment> getAllComments();
+
+	void adminDeleteComment(int commentId);
+
+	List<Comment> getFlaggedComments();
+
+	void approveComment(int commentId);
+
+	void rejectComment(int commentId);
+
+	public void reportComment(int commentId);
 }

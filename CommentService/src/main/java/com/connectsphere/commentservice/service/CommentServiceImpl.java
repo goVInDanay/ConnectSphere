@@ -156,6 +156,60 @@ public class CommentServiceImpl implements CommentService {
 		return commentRepository.countByPostIdAndIsDeletedFalse(postId);
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<Comment> getAllComments() {
+		return commentRepository.findByIsDeletedFalse();
+	}
+
+	@Override
+	public void adminDeleteComment(int commentId) {
+		Comment comment = requireComment(commentId);
+		commentRepository.softDeleteByCommentId(commentId);
+		int replyCount = 0;
+		if (!comment.isReply()) {
+			replyCount = commentRepository.countByParentCommentIdAndIsDeletedFalse(commentId);
+			if (replyCount > 0) {
+				commentRepository.softDeleteRepliesByParentCommentId(commentId);
+			}
+		}
+		int totalDeleted = replyCount + 1;
+		for (int i = 0; i < totalDeleted; i++) {
+			decrementPostCommentCount(comment.getPostId());
+		}
+		log.warn("Admin deleted comment {} with {} replies", commentId, replyCount);
+	}
+
+	@Override
+	public List<Comment> getFlaggedComments() {
+		return commentRepository.findByIsFlaggedTrueAndIsDeletedFalse();
+	}
+
+	@Override
+	public void approveComment(int commentId) {
+		Comment comment = requireComment(commentId);
+		comment.setApproved(true);
+		comment.setFlagged(false);
+		comment.setReportCount(0);
+		commentRepository.save(comment);
+	}
+
+	@Override
+	public void rejectComment(int commentId) {
+		adminDeleteComment(commentId);
+	}
+
+	@Override
+	public void reportComment(int commentId) {
+		Comment comment = requireComment(commentId);
+		comment.setReportCount(comment.getReportCount() + 1);
+		if (comment.getReportCount() >= 5) {
+			comment.setFlagged(true);
+			log.warn("Post {} auto-flagged due to reports", comment);
+		}
+		commentRepository.save(comment);
+	}
+
 	private Comment requireComment(int commentId) {
 		return commentRepository.findByCommentIdAndIsDeletedFalse(commentId).orElseThrow(
 				() -> new ResourceNotFoundException("Comment not found or has been deleted: commentId=" + commentId));

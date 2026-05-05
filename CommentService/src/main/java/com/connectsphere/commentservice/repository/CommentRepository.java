@@ -49,4 +49,8 @@ public interface CommentRepository extends JpaRepository<Comment, Integer> {
 	Boolean isTopLevel(@Param("commentId") int commentId);
 
 	int countByParentCommentIdAndIsDeletedFalse(int parentCommentId);
+
+	List<Comment> findByIsDeletedFalse();
+
+	List<Comment> findByIsFlaggedTrueAndIsDeletedFalse();
 }

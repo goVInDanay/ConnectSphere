@@ -22,8 +22,8 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/comments/post/**", "/api/comments/*/replies", "/api/comments/user/**",
-						"/api/comments/*", "/api/comments/post/*/count")
-				.permitAll().requestMatchers("/api/comments", // POST
+						"/api/comments/*", "/api/comments/post/*/count", "/api/comments/*/report")
+				.permitAll().requestMatchers("/api/comments",
 						"/api/comments/*/replies", "/api/comments/*", "/api/comments/*/like", "/api/comments/*/unlike")
 				.authenticated()
 				.requestMatchers("/swagger-ui/**", "/api/swagger-ui/**", "/api/swagger-ui.html", "/v3/api-docs/**",

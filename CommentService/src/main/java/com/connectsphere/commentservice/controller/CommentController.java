@@ -117,4 +117,10 @@ public class CommentController {
 	public ResponseEntity<Map<String, Integer>> getCommentCount(@PathVariable int postId) {
 		return ResponseEntity.ok(Map.of("commentCount", commentService.getCommentCount(postId)));
 	}
+
+	@GetMapping("/{commentId}/author")
+	public ResponseEntity<Map<String, Integer>> getCommentAuthor(@PathVariable int commentId) {
+		Comment comment = commentService.getCommentById(commentId);
+		return ResponseEntity.ok(Map.of("authorId", comment.getAuthorId()));
+	}
 }
