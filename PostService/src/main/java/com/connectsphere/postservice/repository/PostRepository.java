@@ -21,6 +21,12 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 
 	int countByAuthorIdAndIsDeletedFalse(int authorId);
 
+	@Query("SELECT p FROM Post p WHERE p.authorId=: ownerId AND p.visibility='PUBLIC' AND p.isDeleted=false ORDER BY p.createdAt DESC")
+	List<Post> findPublicPosts(int ownerId);
+
+	@Query("SELECT p FROM Post p WHERE p.authorId = :ownerId AND p.visibility IN ('PUBLIC', 'FOLLOWERS_ONLY') AND p.isDeleted = false ORDER BY p.createdAt DESC")
+	List<Post> findVisibleToFollowers(int ownerId);
+
 	List<Post> findByVisibilityAndIsDeletedFalseOrderByCreatedAtDesc(String visibility);
 
 	@Query("SELECT p FROM Post p " + "WHERE p.authorId IN :userIds " + "AND p.isDeleted = false "
@@ -52,4 +58,6 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 	void softDeleteByPostId(@Param("postId") int postId);
 
 	List<Post> findByAuthorIdOrderByCreatedAtDesc(int authorId);
+
+	List<Post> findByIsFlaggedTrueAndIsDeletedFalse();
 }

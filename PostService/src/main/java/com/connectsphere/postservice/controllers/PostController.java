@@ -48,15 +48,19 @@ public class PostController {
 	}
 
 	@GetMapping("/{postId}")
-	public ResponseEntity<PostResponse> getPostById(@PathVariable int postId) {
+	public ResponseEntity<PostResponse> getPostById(@PathVariable int postId,
+			@AuthenticationPrincipal Integer viewerId) {
 		Post post = postService.getPostById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
-
+		if (!postService.canUserViewPost(viewerId, post)) {
+			throw new RuntimeException("Access denied");
+		}
 		return ResponseEntity.ok(new PostResponse(post.getPostId(), post.getAuthorId()));
 	}
 
 	@GetMapping("/user/{userId}")
-	public ResponseEntity<List<Post>> getPostsByUser(@PathVariable int userId) {
-		List<Post> posts = postService.getPostsByUser(userId);
+	public ResponseEntity<List<Post>> getPostsByUser(@PathVariable int userId,
+			@AuthenticationPrincipal Integer viewerId) {
+		List<Post> posts = postService.getVisiblePosts(userId, viewerId);
 		return ResponseEntity.ok(posts);
 	}
 
@@ -70,10 +74,12 @@ public class PostController {
 	}
 
 	@GetMapping("/search")
-	public ResponseEntity<List<Post>> searchPosts(@RequestParam("q") String term) {
+	public ResponseEntity<List<Post>> searchPosts(@RequestParam("q") String term,
+			@AuthenticationPrincipal Integer viewerId) {
 		log.info("Search api hit");
 		List<Post> results = postService.searchPosts(term);
-		return ResponseEntity.ok(results);
+		List<Post> filtered = results.stream().filter(p -> postService.canUserViewPost(viewerId, p)).toList();
+		return ResponseEntity.ok(filtered);
 	}
 
 	@GetMapping("/user/{userId}/count")
@@ -84,56 +90,66 @@ public class PostController {
 
 	@PutMapping("/{postId}")
 	@PreAuthorize("isAuthenticated()")
-	public ResponseEntity<Post> updatePost(@PathVariable int postId, @Valid @RequestBody UpdatePostRequest request) {
+	public ResponseEntity<Post> updatePost(@PathVariable int postId, @Valid @RequestBody UpdatePostRequest request,
+			@AuthenticationPrincipal Integer userId) {
 
-		Post updated = postService.updatePost(postId, request);
+		Post updated = postService.updatePost(postId, request, userId);
 		return ResponseEntity.ok(updated);
 	}
 
 	@PutMapping("/{postId}/visibility")
 	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Map<String, String>> changeVisibility(@PathVariable int postId,
-			@Valid @RequestBody ChangeVisibilityRequest request) {
+			@Valid @RequestBody ChangeVisibilityRequest request, @AuthenticationPrincipal Integer userId) {
 
-		postService.changeVisibility(postId, request.getVisibility());
+		postService.changeVisibility(postId, request.getVisibility(), userId);
 		return ResponseEntity.ok(Map.of("postId", String.valueOf(postId), "visibility", request.getVisibility(),
 				"message", "Visibility updated successfully"));
 	}
 
 	@DeleteMapping("/{postId}")
 	@PreAuthorize("isAuthenticated()")
-	public ResponseEntity<Map<String, String>> deletePost(@PathVariable int postId) {
-		postService.deletePost(postId);
+	public ResponseEntity<Map<String, String>> deletePost(@PathVariable int postId,
+			@AuthenticationPrincipal Integer userId) {
+		postService.deletePost(postId, userId);
 		return ResponseEntity.ok(Map.of("message", "Post deleted successfully"));
 	}
 
 	@PostMapping("/{postId}/likes/inc")
+	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> incrementLikes(@PathVariable int postId) {
 		postService.incrementLikes(postId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/{postId}/likes/dec")
+	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> decrementLikes(@PathVariable int postId) {
 		postService.decrementLikes(postId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/{postId}/comments/inc")
+	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> incrementComments(@PathVariable int postId) {
 		postService.incrementComments(postId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/{postId}/comments/dec")
+	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> decrementComments(@PathVariable int postId) {
 		postService.decrementComments(postId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@GetMapping("/{postId}/author")
-	public ResponseEntity<Integer> getPostAuthor(@PathVariable int postId) {
+	public ResponseEntity<Integer> getPostAuthor(@PathVariable int postId, @AuthenticationPrincipal Integer viewerId) {
 		Post post = postService.getPostById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+		if (!postService.canUserViewPost(viewerId, post)) {
+			throw new RuntimeException("Access denied");
+		}
+
 		return ResponseEntity.ok(post.getAuthorId());
 	}
 }

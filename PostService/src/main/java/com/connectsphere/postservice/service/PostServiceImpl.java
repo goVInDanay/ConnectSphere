@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.connectsphere.postservice.clients.FollowClient;
 import com.connectsphere.postservice.clients.SearchClient;
 import com.connectsphere.postservice.clients.UserClient;
 import com.connectsphere.postservice.dto.CreateNotificationRequest;
@@ -42,6 +43,7 @@ public class PostServiceImpl implements PostService {
 	private final MentionRepository mentionRepository;
 	private final SearchClient searchClient;
 	private final UserClient userClient;
+	private final FollowClient followClient;
 	private final NotificationProducer notificationProducer;
 
 	private static final Pattern MENTION_PATTERN = Pattern.compile("@(\\w+)");
@@ -108,7 +110,8 @@ public class PostServiceImpl implements PostService {
 		List<Integer> trendingPostIds = searchClient.getTrendingPostIds(20);
 
 		if (trendingPostIds != null && !trendingPostIds.isEmpty()) {
-			feed.addAll(postRepository.findAllById(trendingPostIds));
+			List<Post> trendingPosts = postRepository.findAllById(trendingPostIds);
+			feed.addAll(trendingPosts);
 		}
 
 		feed.addAll(postRepository.findByVisibilityAndIsDeletedFalseOrderByCreatedAtDesc("PUBLIC"));
@@ -135,9 +138,12 @@ public class PostServiceImpl implements PostService {
 	}
 
 	@Override
-	public Post updatePost(int postId, UpdatePostRequest request) {
+	public Post updatePost(int postId, UpdatePostRequest request, int userId) {
 		Post post = requirePost(postId);
 
+		if (post.getAuthorId() != userId) {
+			throw new RuntimeException("You are not allowed to update this post");
+		}
 		if (request.getContent() != null) {
 			post.setContent(request.getContent());
 		}
@@ -152,8 +158,11 @@ public class PostServiceImpl implements PostService {
 	}
 
 	@Override
-	public void deletePost(int postId) {
-		requirePost(postId);
+	public void deletePost(int postId, int userId) {
+		Post post = requirePost(postId);
+		if (post.getAuthorId() != userId) {
+			throw new RuntimeException("You are not allowed to delete this post");
+		}
 		postRepository.softDeleteByPostId(postId);
 		log.info("Post soft-deleted: postId={}", postId);
 	}
@@ -194,8 +203,12 @@ public class PostServiceImpl implements PostService {
 	}
 
 	@Override
-	public void changeVisibility(int postId, String visibility) {
+	public void changeVisibility(int postId, String visibility, int userId) {
 		Post post = requirePost(postId);
+		if (post.getAuthorId() != userId) {
+			throw new RuntimeException("You are not allowed to delete this post");
+		}
+
 		String oldVisibility = post.getVisibility();
 		post.setVisibility(visibility);
 		postRepository.save(post);
@@ -206,6 +219,100 @@ public class PostServiceImpl implements PostService {
 	@Transactional(readOnly = true)
 	public int getPostCount(int userId) {
 		return postRepository.countByAuthorIdAndIsDeletedFalse(userId);
+	}
+
+	@Override
+	public void adminDeletePost(int postId) {
+		postRepository.softDeleteByPostId(postId);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<Post> getAllPosts() {
+		return postRepository.findAll();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<Post> getVisiblePosts(int userId, Integer viewerId) {
+
+		if (viewerId == null) {
+			return postRepository.findPublicPosts(userId);
+		}
+
+		if (userId == viewerId) {
+			return postRepository.findByAuthorIdAndIsDeletedFalseOrderByCreatedAtDesc(userId);
+		}
+		boolean isFollower = followClient.isFollowing(viewerId, userId);
+
+		if (isFollower) {
+			return postRepository.findVisibleToFollowers(userId);
+		} else {
+			return postRepository.findPublicPosts(userId);
+		}
+	}
+
+	@Override
+	public boolean canUserViewPost(Integer viewerId, Post post) {
+
+		if (viewerId == null) {
+			return "PUBLIC".equals(post.getVisibility());
+		}
+
+		if (post.getAuthorId() == viewerId)
+			return true;
+
+		switch (post.getVisibility()) {
+		case "PUBLIC":
+			return true;
+
+		case "FOLLOWERS_ONLY":
+			return followClient.isFollowing(viewerId, post.getAuthorId());
+
+		case "PRIVATE":
+			return false;
+
+		default:
+			return false;
+		}
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<Post> getFlaggedPosts() {
+		return postRepository.findByIsFlaggedTrueAndIsDeletedFalse();
+	}
+
+	@Override
+	public void approvePost(int postId) {
+		Post post = requirePost(postId);
+		post.setApproved(true);
+		post.setFlagged(false);
+		post.setReportCount(0);
+		postRepository.save(post);
+		log.info("Post approved by admin: {}", postId);
+	}
+
+	@Override
+	public void rejectPost(int postId) {
+		Post post = requirePost(postId);
+		post.setDeleted(true);
+		postRepository.save(post);
+		notificationProducer.sendNotification(CreateNotificationRequest.builder().recipientId(post.getAuthorId())
+				.type("ADMIN_ACTION").message("Your post was removed due to policy violation").targetId(postId)
+				.targetType("POST").build());
+		log.warn("Post rejected and deleted by admin: {}", postId);
+	}
+
+	@Override
+	public void reportPost(int postId) {
+		Post post = requirePost(postId);
+		post.setReportCount(post.getReportCount() + 1);
+		if (post.getReportCount() >= 5) {
+			post.setFlagged(true);
+			log.warn("Post {} auto-flagged due to reports", postId);
+		}
+		postRepository.save(post);
 	}
 
 	private Post requirePost(int postId) {
@@ -241,4 +348,5 @@ public class PostServiceImpl implements PostService {
 
 		return usernames;
 	}
+
 }

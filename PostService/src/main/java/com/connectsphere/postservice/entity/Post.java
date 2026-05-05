@@ -83,6 +83,18 @@ public class Post {
 	@Builder.Default
 	private boolean isDeleted = false;
 
+	@Column(nullable = false)
+	@Builder.Default
+	private boolean isFlagged = false;
+
+	@Column(nullable = false)
+	@Builder.Default
+	private boolean isApproved = true;
+
+	@Column(nullable = false)
+	@Builder.Default
+	private int reportCount = 0;
+
 	@CreationTimestamp
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;

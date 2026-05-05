@@ -34,11 +34,10 @@ public class SecurityConfig {
 		http.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.GET, "/api/posts/search/**").permitAll()
-						.requestMatchers("/api/posts/search").permitAll()
-						 .requestMatchers("/api/posts/**").permitAll()
+						.requestMatchers("/api/posts/search").permitAll().requestMatchers("/api/posts/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/posts/{postId}").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/posts/user/{userId}").permitAll()
-						.requestMatchers(HttpMethod.GET, "/api/posts/user/{userId}/count").permitAll().anyRequest()
+						.requestMatchers(HttpMethod.GET, "/api/posts/user/{userId}/count").permitAll().requestMatchers("/api/admin/**").hasRole("ADMIN").anyRequest()
 						.authenticated())
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

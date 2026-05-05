@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 			SecurityContextHolder.getContext().setAuthentication(auth);
 
-			log.debug("Authenticated request: userId={}, email={}", userId, email);
+			log.debug("Authenticated request: userId={}, email={}, role={}", userId, email, role != null ? role : "ROLE_USER");
 		}
 
 		filterChain.doFilter(request, response);
