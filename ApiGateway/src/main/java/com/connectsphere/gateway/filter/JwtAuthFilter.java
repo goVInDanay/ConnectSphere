@@ -48,7 +48,6 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 			String method = request.getMethod().name();
 
 			log.debug("Gateway: {} {}", method, path);
-
 			if (isOpen(method, path, config.getOpenPaths())) {
 				return chain.filter(exchange);
 			}
@@ -60,6 +59,12 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 
 			if (!jwtUtil.isValid(token)) {
 				return reject(exchange, HttpStatus.UNAUTHORIZED, "Invalid or expired token");
+			}
+			if (isAdminRoute(path)) {
+				String role = jwtUtil.extractRole(token);
+				if (!"ROLE_ADMIN".equals(role)) {
+					return reject(exchange, HttpStatus.FORBIDDEN, "Admin access required");
+				}
 			}
 
 			String userId = jwtUtil.extractUserId(token);
@@ -112,5 +117,9 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 				status.getReasonPhrase(), message);
 
 		return response.writeWith(Mono.just(response.bufferFactory().wrap(body.getBytes())));
+	}
+
+	private boolean isAdminRoute(String path) {
+		return path.startsWith("/api/admin");
 	}
 }
