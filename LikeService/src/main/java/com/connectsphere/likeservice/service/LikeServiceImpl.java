@@ -6,16 +6,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import com.connectsphere.likeservice.client.CommentServiceClient;
 import com.connectsphere.likeservice.client.PostServiceClient;
+import com.connectsphere.likeservice.dto.CreateNotificationRequest;
 import com.connectsphere.likeservice.entity.Like;
 import com.connectsphere.likeservice.exception.ResourceNotFoundException;
+import com.connectsphere.likeservice.messaging.NotificationProducer;
 import com.connectsphere.likeservice.repository.LikeRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +30,7 @@ public class LikeServiceImpl implements LikeService {
 	private final LikeRepository likeRepository;
 	private final PostServiceClient postServiceClient;
 	private final CommentServiceClient commentServiceClient;
+	private final NotificationProducer notificationProducer;
 
 	@Override
 	public Like likeTarget(int userId, int targetId, String targetType, String reactionType) {
@@ -64,6 +65,7 @@ public class LikeServiceImpl implements LikeService {
 		}
 
 		incrementTargetCounter(targetId, targetType);
+		sendLikeNotification(userId, targetId, targetType);
 		log.info("Reaction added: likeId={}, userId={}, targetId={}, targetType={}, reaction={}", saved.getLikeId(),
 				userId, targetId, targetId, reactionType);
 
@@ -198,6 +200,34 @@ public class LikeServiceImpl implements LikeService {
 		} catch (Exception ex) {
 			log.error("Counter decrement failed: targetId={}, targetType={}: {}", targetId, targetType,
 					ex.getMessage());
+		}
+	}
+
+	private void sendLikeNotification(int userId, int targetId, String targetType) {
+		try {
+			int recipientId;
+			if (Like.TARGET_POST.equals(targetType)) {
+				recipientId = postServiceClient.getPostAuthor(targetId);
+			} else if (Like.TARGET_COMMENT.equals(targetType)) {
+				recipientId = commentServiceClient.getCommentAuthor(targetId);
+
+			} else {
+				return;
+			}
+			if (recipientId == userId) {
+				return;
+			}
+			CreateNotificationRequest notification = CreateNotificationRequest.builder().recipientId(recipientId)
+					.actorId(userId).type("LIKE").message("Someone liked your " + targetType.toLowerCase())
+					.targetId(targetId).targetType(targetType)
+					.deepLinkUrl("/" + targetType.toLowerCase() + "s/" + targetId).build();
+
+			notificationProducer.sendNotification(notification);
+
+			log.debug("Like notification sent: actor={}, recipient={}, target={}", userId, recipientId, targetId);
+
+		} catch (Exception ex) {
+			log.error("Failed to send like notification: {}", ex.getMessage());
 		}
 	}
 }
