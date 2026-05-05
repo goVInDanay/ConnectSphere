@@ -28,7 +28,25 @@ public interface AuthService {
 
 	void deactivateAccount(int userId);
 
+	void activateAccount(int userId);
+
 	List<User> searchUsers(String term);
-	
+
 	List<User> getUsersByUsernames(List<String> usernames);
+
+	List<User> getAllUsers();
+
+	public void selfDeactivateAccount(int userId);
+
+	public void suspendUser(int userId);
+
+	public void deleteAccount(int userId);
+	
+	public void incrementUserReport(int userId);
+	
+	List<User> getFlaggedUsers();
+	
+	public void flagUser(int userId);
+	
+	void unflagUser(int userId);
 }

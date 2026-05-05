@@ -37,4 +37,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
 	@Query("SELECT u FROM User u WHERE LOWER(u.username) IN :usernames")
 	List<User> findByUsernameIn(@Param("usernames") List<String> usernames);
+
+	List<User> findByIsFlaggedTrue();
 }

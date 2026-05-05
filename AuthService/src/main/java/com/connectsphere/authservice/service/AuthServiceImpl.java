@@ -41,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
 			throw new DuplicateResourceException("Email already registered: " + request.getEmail());
 		}
 
-		if (userRepository.existsByEmail(request.getUsername())) {
+		if (userRepository.existsByUsername(request.getUsername())) {
 			throw new DuplicateResourceException("Username already taken: " + request.getUsername());
 		}
 
@@ -71,6 +71,14 @@ public class AuthServiceImpl implements AuthService {
 
 		User user = userRepository.findByEmail(email)
 				.orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+
+		if (user.isSuspended()) {
+			throw new InvalidCredentialsException("Account suspended");
+		}
+
+		if (user.isDeactivatedByAdmin()) {
+			throw new InvalidCredentialsException("Account deactivated by admin");
+		}
 
 		if (!user.isActive()) {
 			throw new InvalidCredentialsException("Account is deactivated");
@@ -170,6 +178,34 @@ public class AuthServiceImpl implements AuthService {
 	public void deactivateAccount(int userId) {
 		User user = getUserById(userId);
 		user.setActive(false);
+		user.setDeactivatedByAdmin(true);
+		userRepository.save(user);
+		log.info("Account deactivated: userId={}", userId);
+	}
+
+	@Override
+	public void selfDeactivateAccount(int userId) {
+		User user = getUserById(userId);
+		user.setActive(false);
+		userRepository.save(user);
+		log.info("Account deactivated: userId={}", userId);
+	}
+
+	@Override
+	public void activateAccount(int userId) {
+		User user = getUserById(userId);
+		if (user.isSuspended()) {
+			throw new RuntimeException("Account is suspended. Contact admin.");
+		}
+
+		if (user.isDeleted()) {
+			throw new RuntimeException("Account is deleted.");
+		}
+
+		if (user.isDeactivatedByAdmin()) {
+			throw new RuntimeException("Account deactivated by admin. Cannot reactivate.");
+		}
+		user.setActive(true);
 		userRepository.save(user);
 		log.info("Account deactivated: userId={}", userId);
 	}
@@ -178,6 +214,68 @@ public class AuthServiceImpl implements AuthService {
 	@Transactional(readOnly = true)
 	public List<User> searchUsers(String term) {
 		return userRepository.searchUsers(term);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<User> getAllUsers() {
+		return userRepository.findAll();
+	}
+
+	@Override
+	public void suspendUser(int userId) {
+		User user = getUserById(userId);
+
+		user.setSuspended(true);
+		user.setActive(false);
+
+		userRepository.save(user);
+
+		log.info("User suspended: userId={}", userId);
+	}
+
+	@Override
+	public void deleteAccount(int userId) {
+		User user = getUserById(userId);
+
+		user.setDeleted(true);
+		user.setActive(false);
+
+		userRepository.save(user);
+
+		log.info("User deleted (soft): userId={}", userId);
+	}
+
+	@Override
+	@Transactional
+	public void incrementUserReport(int userId) {
+		User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+		user.setReportCount(user.getReportCount() + 1);
+		if (user.getReportCount() >= 5) {
+			user.setFlagged(true);
+		}
+		userRepository.save(user);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<User> getFlaggedUsers() {
+		return userRepository.findByIsFlaggedTrue();
+	}
+
+	@Override
+	public void flagUser(int userId) {
+		User user = getUserById(userId);
+		user.setFlagged(true);
+		userRepository.save(user);
+	}
+
+	@Override
+	public void unflagUser(int userId) {
+		User user = getUserById(userId);
+		user.setFlagged(false);
+		user.setReportCount(0);
+		userRepository.save(user);
 	}
 
 	public User processOAuthLogin(String provider, String providerId, String email, String name) {

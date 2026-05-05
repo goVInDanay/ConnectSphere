@@ -122,7 +122,7 @@ public class AuthController {
 	@DeleteMapping("/deactivate")
 	public ResponseEntity<Map<String, String>> deactivate(@AuthenticationPrincipal Integer userId,
 			HttpServletResponse response) {
-		authService.deactivateAccount(userId);
+		authService.selfDeactivateAccount(userId);
 		clearAuthCookies(response);
 		return ResponseEntity.ok(Map.of("message", "Account deactivated"));
 	}
