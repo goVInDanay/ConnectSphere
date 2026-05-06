@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.connectsphere.authservice.dto.AuthResponse;
+import com.connectsphere.authservice.dto.CreateNotificationRequest;
 import com.connectsphere.authservice.dto.RegisterRequest;
 import com.connectsphere.authservice.dto.UpdateProfileRequest;
 import com.connectsphere.authservice.dto.UserSummary;
@@ -14,6 +15,7 @@ import com.connectsphere.authservice.entities.User;
 import com.connectsphere.authservice.exceptions.DuplicateResourceException;
 import com.connectsphere.authservice.exceptions.InvalidCredentialsException;
 import com.connectsphere.authservice.exceptions.ResourceNotFoundException;
+import com.connectsphere.authservice.messaging.NotificationProducer;
 import com.connectsphere.authservice.repository.UserRepository;
 import com.connectsphere.authservice.util.JwtUtil;
 
@@ -29,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtUtil jwtUtil;
+	private final NotificationProducer notificationProducer;
 
 	@Override
 	public User register(RegisterRequest request) {
@@ -38,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
 			throw new DuplicateResourceException("Email already registered: " + request.getEmail());
 		}
 
-		if (userRepository.existsByEmail(request.getUsername())) {
+		if (userRepository.existsByUsername(request.getUsername())) {
 			throw new DuplicateResourceException("Username already taken: " + request.getUsername());
 		}
 
@@ -47,6 +50,17 @@ public class AuthServiceImpl implements AuthService {
 				.role("ROLE_USER").provider("local").isActive(true).build();
 		User saved = userRepository.save(user);
 		log.info("User registered successfully: userId={}", saved.getUserId());
+		try {
+			CreateNotificationRequest notification = CreateNotificationRequest.builder().recipientId(saved.getUserId())
+					.actorId(saved.getUserId()).type("ACCOUNT_ACTION").message("Welcome to ConnectSphere 🎉")
+					.targetId(saved.getUserId()).targetType("USER").deepLinkUrl("/profile/" + saved.getUserId())
+					.build();
+
+			notificationProducer.sendNotification(notification);
+
+		} catch (Exception ex) {
+			log.error("Failed to send welcome notification: {}", ex.getMessage());
+		}
 		return saved;
 	}
 
@@ -57,6 +71,14 @@ public class AuthServiceImpl implements AuthService {
 
 		User user = userRepository.findByEmail(email)
 				.orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+
+		if (user.isSuspended()) {
+			throw new InvalidCredentialsException("Account suspended");
+		}
+
+		if (user.isDeactivatedByAdmin()) {
+			throw new InvalidCredentialsException("Account deactivated by admin");
+		}
 
 		if (!user.isActive()) {
 			throw new InvalidCredentialsException("Account is deactivated");
@@ -113,6 +135,16 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public List<User> getUsersByUsernames(List<String> usernames) {
+		if (usernames == null || usernames.isEmpty()) {
+			return List.of();
+		}
+		List<String> uniqueUsernames = usernames.stream().map(String::toLowerCase).distinct().toList();
+		return userRepository.findByUsernameIn(uniqueUsernames);
+	}
+
+	@Override
 	public User updateProfile(int userId, UpdateProfileRequest request) {
 		User user = getUserById(userId);
 
@@ -146,6 +178,34 @@ public class AuthServiceImpl implements AuthService {
 	public void deactivateAccount(int userId) {
 		User user = getUserById(userId);
 		user.setActive(false);
+		user.setDeactivatedByAdmin(true);
+		userRepository.save(user);
+		log.info("Account deactivated: userId={}", userId);
+	}
+
+	@Override
+	public void selfDeactivateAccount(int userId) {
+		User user = getUserById(userId);
+		user.setActive(false);
+		userRepository.save(user);
+		log.info("Account deactivated: userId={}", userId);
+	}
+
+	@Override
+	public void activateAccount(int userId) {
+		User user = getUserById(userId);
+		if (user.isSuspended()) {
+			throw new RuntimeException("Account is suspended. Contact admin.");
+		}
+
+		if (user.isDeleted()) {
+			throw new RuntimeException("Account is deleted.");
+		}
+
+		if (user.isDeactivatedByAdmin()) {
+			throw new RuntimeException("Account deactivated by admin. Cannot reactivate.");
+		}
+		user.setActive(true);
 		userRepository.save(user);
 		log.info("Account deactivated: userId={}", userId);
 	}
@@ -154,6 +214,68 @@ public class AuthServiceImpl implements AuthService {
 	@Transactional(readOnly = true)
 	public List<User> searchUsers(String term) {
 		return userRepository.searchUsers(term);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<User> getAllUsers() {
+		return userRepository.findAll();
+	}
+
+	@Override
+	public void suspendUser(int userId) {
+		User user = getUserById(userId);
+
+		user.setSuspended(true);
+		user.setActive(false);
+
+		userRepository.save(user);
+
+		log.info("User suspended: userId={}", userId);
+	}
+
+	@Override
+	public void deleteAccount(int userId) {
+		User user = getUserById(userId);
+
+		user.setDeleted(true);
+		user.setActive(false);
+
+		userRepository.save(user);
+
+		log.info("User deleted (soft): userId={}", userId);
+	}
+
+	@Override
+	@Transactional
+	public void incrementUserReport(int userId) {
+		User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+		user.setReportCount(user.getReportCount() + 1);
+		if (user.getReportCount() >= 5) {
+			user.setFlagged(true);
+		}
+		userRepository.save(user);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<User> getFlaggedUsers() {
+		return userRepository.findByIsFlaggedTrue();
+	}
+
+	@Override
+	public void flagUser(int userId) {
+		User user = getUserById(userId);
+		user.setFlagged(true);
+		userRepository.save(user);
+	}
+
+	@Override
+	public void unflagUser(int userId) {
+		User user = getUserById(userId);
+		user.setFlagged(false);
+		user.setReportCount(0);
+		userRepository.save(user);
 	}
 
 	public User processOAuthLogin(String provider, String providerId, String email, String name) {

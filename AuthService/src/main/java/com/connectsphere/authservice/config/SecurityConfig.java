@@ -34,9 +34,11 @@ public class SecurityConfig {
 		http.cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf(csrf -> csrf.disable())
 				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/oauth2/**",
-								"/login/oauth2/**")
-						.permitAll().requestMatchers("/api/users/search", "/api/users/{userId}/profile").permitAll()
+						.requestMatchers("/swagger-ui/**", "/api/swagger-ui/**", "/api/swagger-ui.html",
+								"/v3/api-docs/**", "/v3/api-docs", "/webjars/**", "/swagger-resources/**",
+								"/configuration/**", "/api/auth/register", "/api/auth/login", "/api/auth/refresh",
+								"/oauth2/**", "/login/oauth2/**")
+						.permitAll().requestMatchers("/api/auth/search/**", "/api/users/{userId}/profile", "/api/auth/{id}/email", "/api/auth/profile/{userId}", "/api/auth/username").permitAll()
 						.requestMatchers("/api/admin/**").hasRole("ADMIN").anyRequest().authenticated())
 //				.oauth2Login(oauth2 -> oauth2.defaultSuccessUrl("/oauth2/callback", true))
 				.oauth2Login(oauth2 -> oauth2.disable())

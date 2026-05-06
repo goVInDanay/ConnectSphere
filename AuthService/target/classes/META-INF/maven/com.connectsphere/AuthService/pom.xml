@@ -76,6 +76,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--Feign-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+
         <!--Lombok-->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -102,6 +109,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--Eureka-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+
         <!--  Swagger -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -116,6 +129,12 @@
             <scope>test</scope>
         </dependency>
 
+        <!--Rabbit MQ-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- Security testing -->
         <dependency>
             <groupId>org.springframework.security</groupId>
@@ -124,7 +143,17 @@
         </dependency>
 
     </dependencies>
-
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2023.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <build>
         <plugins>
 

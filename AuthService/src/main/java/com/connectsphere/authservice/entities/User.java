@@ -74,6 +74,26 @@ public class User {
 	@Builder.Default
 	private boolean isActive = true;
 
+	@Column(nullable = false)
+	@Builder.Default
+	private boolean isSuspended = false;
+
+	@Column(nullable = false)
+	@Builder.Default
+	private boolean isDeleted = false;
+
+	@Column(nullable = false)
+	@Builder.Default
+	private int reportCount = 0;
+
+	@Column(nullable = false)
+	@Builder.Default
+	private boolean isFlagged = false;
+
+	@Column(nullable = false)
+	@Builder.Default
+	private boolean deactivatedByAdmin = false;
+
 	@CreationTimestamp
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
