@@ -23,5 +23,7 @@ public interface FollowService {
 
 	List<Integer> getSuggestedUsers(int userId);
 
+	List<Integer> getFollowerIds(int userId);
+	
 	List<Integer> getFolloweeIds(int userId);
 }

@@ -107,4 +107,10 @@ public class FollowServiceImpl implements FollowService {
 		return followRepository.findFolloweeIds(userId);
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<Integer> getFollowerIds(int userId) {
+		return followRepository.findFollowerIds(userId);
+	}
+
 }

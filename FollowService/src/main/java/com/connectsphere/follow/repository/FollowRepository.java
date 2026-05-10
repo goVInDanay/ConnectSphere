@@ -34,6 +34,9 @@ public interface FollowRepository extends JpaRepository<Follows, Integer> {
 	@Query("Select f.followeeId FROM Follows f WHERE f.followerId = :followerId AND f.status = 'ACTIVE'")
 	List<Integer> findFolloweeIds(@Param("followerId") int followerId);
 
+	@Query("Select f.followerId FROM Follows f WHERE f.followeeId = :followeeId AND f.status = 'ACTIVE'")
+	List<Integer> findFollowerIds(@Param("followeeId") int followeeId);
+
 	@Query("SELECT f1.followeeId FROM Follows f1 WHERE f1.followerId = :userId AND f1.status = 'ACTIVE' "
 			+ "AND EXISTS (SELECT 1 FROM Follows f2 WHERE f2.followerId = f1.followeeId "
 			+ "  AND f2.followeeId = :userId AND f2.status = 'ACTIVE')")

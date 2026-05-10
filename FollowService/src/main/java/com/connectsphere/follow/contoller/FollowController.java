@@ -85,4 +85,9 @@ public class FollowController {
 	public ResponseEntity<Map<String, List<Integer>>> getFolloweeIds(@AuthenticationPrincipal Integer userId) {
 		return ResponseEntity.ok(Map.of("followeeIds", followService.getFolloweeIds(userId)));
 	}
+
+	@GetMapping("/{userId}/follower-ids")
+	public ResponseEntity<List<Integer>> getFollowerIds(int userId) {
+		return ResponseEntity.ok(followService.getFollowerIds(userId));
+	}
 }
