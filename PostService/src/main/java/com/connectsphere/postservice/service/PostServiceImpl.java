@@ -45,6 +45,7 @@ public class PostServiceImpl implements PostService {
 	private final UserClient userClient;
 	private final FollowClient followClient;
 	private final NotificationProducer notificationProducer;
+	private final FeedCacheService feedCacheService;
 
 	private static final Pattern MENTION_PATTERN = Pattern.compile("@(\\w+)");
 
@@ -81,13 +82,20 @@ public class PostServiceImpl implements PostService {
 		}
 		log.info("Post created: postId={}, authorId={}, visibility={}", saved.getPostId(), saved.getAuthorId(),
 				saved.getVisibility());
+		feedCacheService.evictFollowerFeeds(followClient.getFollowerIds(saved.getAuthorId()));
 		return saved;
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Optional<Post> getPostById(int postId) {
-		return postRepository.findByPostIdAndIsDeletedFalse(postId);
+		Optional<Post> cached = feedCacheService.getCachedPost(postId);
+		if (cached.isPresent()) {
+			return cached;
+		}
+		Optional<Post> post = postRepository.findByPostIdAndIsDeletedFalse(postId);
+		post.ifPresent(feedCacheService::storePost);
+		return post;
 	}
 
 	@Override
@@ -100,9 +108,15 @@ public class PostServiceImpl implements PostService {
 	@Transactional(readOnly = true)
 	public List<Post> getFeedForUser(int userId, List<Integer> followeeIds) {
 		log.debug("Generating feed for user={}", userId);
+
+		Optional<List<Post>> cached = feedCacheService.getCachedFeed(userId);
+		if (cached.isPresent()) {
+			return cached.get();
+		}
+
 		List<Post> feed = new ArrayList<>();
 
-		if (CollectionUtils.isEmpty(followeeIds)) {
+		if (!CollectionUtils.isEmpty(followeeIds)) {
 			List<Post> followeePosts = postRepository.findFeedByUserIds(followeeIds);
 			feed.addAll(followeePosts);
 		}
@@ -134,7 +148,12 @@ public class PostServiceImpl implements PostService {
 			return Double.compare(score2, score1);
 		});
 
-		return finalFeed.stream().limit(50).toList();
+		List<Post> result = finalFeed.stream().limit(50).toList();
+
+		feedCacheService.storeFeed(userId, result);
+		result.forEach(feedCacheService::storePost);
+
+		return result;
 	}
 
 	@Override
@@ -154,6 +173,8 @@ public class PostServiceImpl implements PostService {
 
 		Post updated = postRepository.save(post);
 		log.info("Post updated: postId={}", postId);
+		feedCacheService.evictPost(postId);
+		feedCacheService.evictFeed(userId);
 		return updated;
 	}
 
@@ -164,6 +185,8 @@ public class PostServiceImpl implements PostService {
 			throw new RuntimeException("You are not allowed to delete this post");
 		}
 		postRepository.softDeleteByPostId(postId);
+		feedCacheService.evictPost(postId);
+		feedCacheService.evictFeed(userId);
 		log.info("Post soft-deleted: postId={}", postId);
 	}
 
@@ -178,6 +201,7 @@ public class PostServiceImpl implements PostService {
 	public void incrementLikes(int postId) {
 		requirePost(postId);
 		postRepository.incrementLikesCount(postId);
+		feedCacheService.evictPost(postId);
 		log.debug("Likes incremented for postId={}", postId);
 	}
 
@@ -185,6 +209,7 @@ public class PostServiceImpl implements PostService {
 	public void decrementLikes(int postId) {
 		requirePost(postId);
 		postRepository.decrementLikesCount(postId);
+		feedCacheService.evictPost(postId);
 		log.debug("Likes decremented for postId={}", postId);
 	}
 
@@ -192,6 +217,7 @@ public class PostServiceImpl implements PostService {
 	public void incrementComments(int postId) {
 		requirePost(postId);
 		postRepository.incrementCommentsCount(postId);
+		feedCacheService.evictPost(postId);
 		log.debug("Comments incremented for postId={}", postId);
 	}
 
@@ -199,6 +225,7 @@ public class PostServiceImpl implements PostService {
 	public void decrementComments(int postId) {
 		requirePost(postId);
 		postRepository.decrementCommentsCount(postId);
+		feedCacheService.evictPost(postId);
 		log.debug("Comments decremented for postId={}", postId);
 	}
 
@@ -212,6 +239,8 @@ public class PostServiceImpl implements PostService {
 		String oldVisibility = post.getVisibility();
 		post.setVisibility(visibility);
 		postRepository.save(post);
+		feedCacheService.evictPost(postId);
+		feedCacheService.evictFeed(userId);
 		log.info("Post {} visibility changed: {} → {}", postId, oldVisibility, visibility);
 	}
 
@@ -316,8 +345,14 @@ public class PostServiceImpl implements PostService {
 	}
 
 	private Post requirePost(int postId) {
-		return postRepository.findByPostIdAndIsDeletedFalse(postId)
+		Optional<Post> cached = feedCacheService.getCachedPost(postId);
+		if (cached.isPresent()) {
+			return cached.get();
+		}
+		Post post = postRepository.findByPostIdAndIsDeletedFalse(postId)
 				.orElseThrow(() -> new PostNotFoundException("Post not found: " + postId));
+		feedCacheService.storePost(post);
+		return post;
 	}
 
 	private String derivePostType(String explicitType, List<String> mediaUrls) {
