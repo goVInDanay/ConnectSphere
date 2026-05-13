@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(name = "follow-service")
 public interface FollowClient {
 
-	@GetMapping("/is-following")
-	Boolean isFollowing(@RequestParam int userId, @RequestParam int followeeId);
+	@GetMapping("/api/follows/is-following")
+	Boolean isFollowing(@RequestParam int followerId, @RequestParam int followeeId);
 	
     @GetMapping("/api/follows/{userId}/follower-ids")
     List<Integer> getFollowerIds(@PathVariable("userId") int userId);

@@ -116,28 +116,24 @@ public class PostController {
 	}
 
 	@PostMapping("/{postId}/likes/inc")
-	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> incrementLikes(@PathVariable int postId) {
 		postService.incrementLikes(postId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/{postId}/likes/dec")
-	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> decrementLikes(@PathVariable int postId) {
 		postService.decrementLikes(postId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/{postId}/comments/inc")
-	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> incrementComments(@PathVariable int postId) {
 		postService.incrementComments(postId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/{postId}/comments/dec")
-	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> decrementComments(@PathVariable int postId) {
 		postService.decrementComments(postId);
 		return ResponseEntity.noContent().build();
