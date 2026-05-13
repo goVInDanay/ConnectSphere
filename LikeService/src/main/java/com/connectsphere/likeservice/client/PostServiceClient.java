@@ -14,5 +14,5 @@ public interface PostServiceClient {
 	void decrementLikeCount(@PathVariable int postId);
 
 	@GetMapping("/api/posts/{postId}/author")
-	int getPostAuthor(int targetId);
+	int getPostAuthor(@PathVariable("postId") int targetId);
 }
