@@ -41,38 +41,39 @@ public class FollowController {
 	}
 
 	@GetMapping("/{userId}/followers")
-	public ResponseEntity<List<Follows>> getFollowers(@PathVariable int userId) {
+	public ResponseEntity<List<Follows>> getFollowers(@PathVariable Integer userId) {
 		return ResponseEntity.ok(followService.getFollowers(userId));
 	}
 
 	@GetMapping("/{userId}/following")
-	public ResponseEntity<List<Follows>> getFollowing(@PathVariable int userId) {
+	public ResponseEntity<List<Follows>> getFollowing(@PathVariable Integer userId) {
 		return ResponseEntity.ok(followService.getFollowing(userId));
 	}
 
 	@GetMapping("/{userId}/follower-count")
-	public ResponseEntity<Map<String, Long>> getFollowerCount(@PathVariable int userId) {
+	public ResponseEntity<Map<String, Long>> getFollowerCount(@PathVariable Integer userId) {
 		return ResponseEntity.ok(Map.of("followerCount", followService.getFollowerCount(userId)));
 	}
 
 	@GetMapping("/{userId}/following-count")
-	public ResponseEntity<Map<String, Long>> getFollowingCount(@PathVariable int userId) {
+	public ResponseEntity<Map<String, Long>> getFollowingCount(@PathVariable Integer userId) {
 		return ResponseEntity.ok(Map.of("followingCount", followService.getFollowingCount(userId)));
 	}
 
 	@GetMapping("/is-following/{followeeId}")
-	public ResponseEntity<Map<String, Boolean>> isFollowing(@AuthenticationPrincipal int userId,
+	public ResponseEntity<Map<String, Boolean>> isFollowing(@AuthenticationPrincipal Integer userId,
 			@PathVariable int followeeId) {
 		return ResponseEntity.ok(Map.of("isFollowing", followService.isFollowing(userId, followeeId)));
 	}
 
 	@GetMapping("/is-following")
-	public ResponseEntity<Boolean> isFollowingInternal(@RequestParam int followerId, @RequestParam int followeeId) {
+	public ResponseEntity<Boolean> isFollowingInternal(@RequestParam Integer followerId,
+			@RequestParam Integer followeeId) {
 		return ResponseEntity.ok(followService.isFollowing(followerId, followeeId));
 	}
 
 	@GetMapping("/mutual")
-	public ResponseEntity<Map<String, List<Integer>>> getMutualFollows(@AuthenticationPrincipal int userId) {
+	public ResponseEntity<Map<String, List<Integer>>> getMutualFollows(@AuthenticationPrincipal Integer userId) {
 		return ResponseEntity.ok(Map.of("mutualFollowIds", followService.getMutualFollows(userId)));
 	}
 
@@ -87,7 +88,7 @@ public class FollowController {
 	}
 
 	@GetMapping("/{userId}/follower-ids")
-	public ResponseEntity<List<Integer>> getFollowerIds(int userId) {
+	public ResponseEntity<List<Integer>> getFollowerIds(@PathVariable int userId) {
 		return ResponseEntity.ok(followService.getFollowerIds(userId));
 	}
 }
