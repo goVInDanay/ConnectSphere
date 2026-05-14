@@ -45,6 +45,9 @@ public class Story {
 	@Column(nullable = false, length = 1000)
 	private String mediaUrl;
 
+	@Column(length = 300)
+	private String mediaPublicId;
+	
 	@Column(length = 500)
 	private String caption;
 

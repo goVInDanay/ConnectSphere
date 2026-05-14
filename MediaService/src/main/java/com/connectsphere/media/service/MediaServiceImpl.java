@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.connectsphere.media.clients.PostClient;
 import com.connectsphere.media.dto.PostDTO;
+import com.connectsphere.media.dto.UploadResult;
 import com.connectsphere.media.entity.Media;
 import com.connectsphere.media.entity.Story;
 import com.connectsphere.media.exception.InvalidMediaException;
@@ -34,14 +35,15 @@ public class MediaServiceImpl implements MediaService {
 
 	private final MediaRepository mediaRepository;
 	private final StoryRepository storyRepository;
+	private final StorageService storageService;
 
 	private final PostClient postClient;
 
-	@Value("${file.upload-dir}")
-	private String uploadDir;
+	@Value("${cloudinary.folder.media:connectsphere/media}")
+	private String mediaFolder;
 
-	@Value("${app.base-url}")
-	private String baseUrl;
+	@Value("${cloudinary.folder.stories:connectsphere/stories}")
+	private String storiesFolder;
 
 	private static final Set<String> ALLOWED_MIME_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "video/mp4");
 
@@ -63,26 +65,20 @@ public class MediaServiceImpl implements MediaService {
 		String extension = getExtension(file.getOriginalFilename());
 		String fileName = uploaderId + "/" + UUID.randomUUID() + "." + extension;
 		String mimeType = file.getContentType();
+		boolean isVideo = mimeType != null && mimeType.startsWith("VIDEO");
+		String resourceType = isVideo ? "video" : "image";
 
-		Path filePath = Paths.get(uploadDir, fileName);
-		String fileUrl = "/uploads/" + fileName;
+		String folder = mediaFolder + "/" + uploaderId;
+		UploadResult result = storageService.upload(file, folder, resourceType);
 
-		try {
-			Files.createDirectories(filePath.getParent());
-			Files.write(filePath, file.getBytes());
-			log.info("File stored locally: {}", filePath);
-		} catch (Exception e) {
-			throw new InvalidMediaException("You are not allowed to delete this story");
-		}
-
-		Media media = Media.builder().uploaderId(uploaderId).url(fileUrl).filePath(fileName)
-				.mediaType(mimeType.startsWith("video") ? Media.TYPE_VIDEO : Media.TYPE_IMAGE)
-				.sizeKb(file.getSize() / 1024).mimeType(mimeType).linkedPostId(linkedPostId)
-				.originalFileName(file.getOriginalFilename()).deleteStatus(false).build();
+		Media media = Media.builder().uploaderId(uploaderId).url(result.getUrl()).filePath(result.getPublicId())
+				.mediaType(isVideo ? Media.TYPE_VIDEO : Media.TYPE_IMAGE).sizeKb(result.getBytes() / 1024)
+				.mimeType(mimeType).linkedPostId(linkedPostId).originalFileName(file.getOriginalFilename())
+				.deleteStatus(false).build();
 
 		Media saved = mediaRepository.save(media);
 
-		log.info("Media persisted: mediaId={}, url={}", saved.getMediaId(), saved.getUrl());
+		log.info("Media uploaded to Cloudinary: mediaId={}, url={}", saved.getMediaId(), saved.getUrl());
 
 		return saved;
 	}
@@ -107,13 +103,8 @@ public class MediaServiceImpl implements MediaService {
 		if (media.getUploaderId() != userId) {
 			throw new InvalidMediaException("You are not allowed to delete this media");
 		}
-		try {
-			Path filePath = Paths.get(uploadDir, media.getFilePath());
-			Files.deleteIfExists(filePath);
-			log.info("File deleted: {}", filePath);
-		} catch (Exception e) {
-			log.warn("Failed to delete file: {}", media.getFilePath());
-		}
+		String resourceType = Media.TYPE_VIDEO.equals(media.getMediaType()) ? "video" : "image";
+		storageService.delete(media.getFilePath(), resourceType);
 		mediaRepository.softDeleteByMediaId(mediaId);
 	}
 
@@ -130,27 +121,31 @@ public class MediaServiceImpl implements MediaService {
 			throw new InvalidMediaException("Not allowed to delete media of this post");
 		}
 		for (Media media : mediaList) {
-			try {
-				Path filePath = Paths.get(uploadDir, media.getFilePath());
-				Files.deleteIfExists(filePath);
-			} catch (Exception e) {
-				log.warn("Failed to delete file: {}", media.getFilePath());
-			}
+			String resourceType = Media.TYPE_VIDEO.equals(media.getMediaType()) ? "video" : "image";
+			storageService.delete(media.getFilePath(), resourceType);
 		}
 
 		mediaRepository.softDeleteByLinkedPostId(postId);
+		log.info("All media deleted from Cloudinary for postId={}", postId);
 	}
 
 	@Override
 	public Story createStory(MultipartFile file, int authorId, String caption) {
 		validateFile(file);
-		Media uploaded = uploadMedia(file, authorId, 0);
-		LocalDateTime now = LocalDateTime.now();
-		Story story = Story.builder().authorId(authorId).mediaUrl(uploaded.getUrl()).caption(caption)
-				.mediaType(uploaded.getMediaType()).viewCount(0).expiresAt(now.plusHours(24)).activeStatus(true)
-				.build();
+		String mimeType = file.getContentType();
+		boolean isVideo = mimeType != null && mimeType.startsWith("video");
+		String resourceType = isVideo ? "video" : "image";
+		String folder = storiesFolder + "/" + authorId;
+		UploadResult result = storageService.upload(file, folder, resourceType);
 
-		return storyRepository.save(story);
+		Story story = Story.builder().authorId(authorId).mediaUrl(result.getUrl()).mediaPublicId(result.getPublicId())
+				.caption(caption).mediaType(isVideo ? Media.TYPE_VIDEO : Media.TYPE_IMAGE).viewCount(0)
+				.expiresAt(LocalDateTime.now().plusHours(24)).activeStatus(true).build();
+
+		Story saved = storyRepository.save(story);
+		log.info("Story created: storyId={}, url={}", saved.getStoryId(), saved.getMediaUrl());
+		return saved;
+
 	}
 
 	@Override
@@ -179,8 +174,14 @@ public class MediaServiceImpl implements MediaService {
 		if (story.getAuthorId() != userId) {
 			throw new InvalidMediaException("You are not allowed to delete this story");
 		}
+		if (story.getMediaPublicId() != null) {
+			String resourceType = Media.TYPE_VIDEO.equals(story.getMediaType()) ? "video" : "image";
+			storageService.delete(story.getMediaPublicId(), resourceType);
+		}
+
 		story.setActiveStatus(false);
 		storyRepository.save(story);
+		log.info("Story deleted: storyId={}", storyId);
 	}
 
 	@Override
