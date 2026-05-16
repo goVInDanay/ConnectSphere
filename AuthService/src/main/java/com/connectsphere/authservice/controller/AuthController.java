@@ -83,8 +83,7 @@ public class AuthController {
 	}
 
 	@PostMapping("/refresh")
-	public ResponseEntity<Map<String, String>> refresh(HttpServletRequest request, HttpServletResponse response,
-			@RequestBody Map<String, String> body) {
+	public ResponseEntity<Map<String, String>> refresh(HttpServletRequest request, HttpServletResponse response) {
 
 		String refreshToken = extractCookie(request, refreshCookieName);
 		if (refreshToken == null) {
