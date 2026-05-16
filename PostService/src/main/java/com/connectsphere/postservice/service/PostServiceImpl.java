@@ -83,6 +83,7 @@ public class PostServiceImpl implements PostService {
 		log.info("Post created: postId={}, authorId={}, visibility={}", saved.getPostId(), saved.getAuthorId(),
 				saved.getVisibility());
 		feedCacheService.evictFollowerFeeds(followClient.getFollowerIds(saved.getAuthorId()));
+		feedCacheService.evictFeed(saved.getAuthorId());
 		return saved;
 	}
 
@@ -119,6 +120,7 @@ public class PostServiceImpl implements PostService {
 		if (!CollectionUtils.isEmpty(followeeIds)) {
 			List<Post> followeePosts = postRepository.findFeedByUserIds(followeeIds);
 			feed.addAll(followeePosts);
+			feed.addAll(postRepository.findByAuthorIdAndIsDeletedFalseOrderByCreatedAtDesc(userId));
 		}
 
 		List<Integer> trendingPostIds = searchClient.getTrendingPostIds(20);

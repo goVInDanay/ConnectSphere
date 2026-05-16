@@ -34,7 +34,7 @@ public class FeedCacheService {
 		try {
 			Object cached = redisTemplate.opsForValue().get(key);
 			if (cached instanceof List<?> list) {
-				log.debug("Feed cached HIT for user = {}", userId);
+				log.debug("Feed cached HIT for user = {}, {}", userId, list);
 				return Optional.of((List<Post>) list);
 			}
 		} catch (Exception e) {
@@ -48,7 +48,7 @@ public class FeedCacheService {
 		String key = feedKey(userId);
 		try {
 			redisTemplate.opsForValue().set(key, feed, Duration.ofSeconds(feedTtlSeconds));
-			log.debug("Feed cached for user={}, size ={}, ttl = {} s", userId, feed.size(), feedTtlSeconds);
+			log.debug("Feed cached for user={}, size ={}, ttl = {} s, {}", userId, feed.size(), feedTtlSeconds, feed);
 		} catch (Exception e) {
 			log.warn("Redis write error for key = {}:{}", key, e.getMessage());
 		}
@@ -83,7 +83,7 @@ public class FeedCacheService {
 		try {
 			Object cached = redisTemplate.opsForValue().get(key);
 			if (cached instanceof Post post) {
-				log.debug("Post cache HIT postId = {}", postId);
+				log.debug("Post cache HIT postId = {},{}", postId, post);
 				return Optional.of(post);
 			}
 		} catch (Exception e) {
@@ -121,6 +121,6 @@ public class FeedCacheService {
 	}
 
 	private String postKey(int postId) {
-		return String.format(FEED_KEY, postId);
+		return String.format(POST_KEY, postId);
 	}
 }
