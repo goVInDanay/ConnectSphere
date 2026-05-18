@@ -189,6 +189,9 @@ public class PostServiceImpl implements PostService {
 		postRepository.softDeleteByPostId(postId);
 		feedCacheService.evictPost(postId);
 		feedCacheService.evictFeed(userId);
+		List<Integer> followers = followClient.getFollowerIds(userId);
+	    followers.add(userId);
+	    feedCacheService.evictFollowerFeeds(followers);
 		log.info("Post soft-deleted: postId={}", postId);
 	}
 
