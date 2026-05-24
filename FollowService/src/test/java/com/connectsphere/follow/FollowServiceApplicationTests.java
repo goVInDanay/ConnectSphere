@@ -1,4 +1,4 @@
-package com.connectsphere.gateway;
+package com.connectsphere.follow;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

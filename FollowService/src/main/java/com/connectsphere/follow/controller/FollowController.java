@@ -1,4 +1,4 @@
-package com.connectsphere.follow.contoller;
+package com.connectsphere.follow.controller;
 
 import java.util.List;
 import java.util.Map;
