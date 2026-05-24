@@ -52,18 +52,16 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Debug – print sonar-project.properties
-        working-directory: ${{ matrix.service }}
-        run: cat sonar-project.properties
-
       - name: Build and analyze – ${{ matrix.service }}
         working-directory: ${{ matrix.service }}
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # ← required for GitHub-bound SonarCloud orgs
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn -B -e package org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar \
+          mvn -B package org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar \
             -DskipTests \
             -Dsonar.organization=govindanay \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.projectKey=com.connectsphere:${{ matrix.service }} \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.projectName="ConnectSphere ${{ matrix.service }}" \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
