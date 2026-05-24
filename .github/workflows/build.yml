@@ -10,22 +10,22 @@ on:
 
 jobs:
   build:
-    name: Build and analyze – ${{ matrix.service.name }}
+    name: Build and analyze – ${{ matrix.service }}
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         service:
-          - { name: AuthService,         key: "com.connectsphere:AuthService" }
-          - { name: PostService,          key: "com.connectsphere:PostService" }
-          - { name: CommentService,       key: "com.connectsphere:CommentService" }
-          - { name: LikeService,          key: "com.connectsphere:LikeService" }
-          - { name: FollowService,        key: "com.connectsphere:FollowService" }
-          - { name: NotificationService,  key: "com.connectsphere:NotificationService" }
-          - { name: MediaService,         key: "com.connectsphere:MediaService" }
-          - { name: SearchService,        key: "com.connectsphere:SearchService" }
-          - { name: ApiGateway,           key: "com.connectsphere:ApiGateway" }
+          - AuthService
+          - PostService
+          - CommentService
+          - LikeService
+          - FollowService
+          - NotificationService
+          - MediaService
+          - SearchService
+          - ApiGateway
 
     steps:
       - uses: actions/checkout@v4
@@ -52,24 +52,18 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Verify token can reach SonarCloud
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          echo "Checking SonarCloud access..."
-          curl -s -u "$SONAR_TOKEN:" \
-            "https://sonarcloud.io/api/projects/search?organization=govindanay" \
-            | grep -o '"total":[0-9]*'
+      - name: Debug – print sonar-project.properties
+        working-directory: ${{ matrix.service }}
+        run: cat sonar-project.properties
 
-      - name: Build and analyze – ${{ matrix.service.name }}
-        working-directory: ${{ matrix.service.name }}
+      - name: Build and analyze – ${{ matrix.service }}
+        working-directory: ${{ matrix.service }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn -B package org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar \
+          mvn -B -e package org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar \
             -DskipTests \
-            -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.organization=govindanay \
-            -Dsonar.projectKey=${{ matrix.service.key }} \
-            -Dsonar.projectName="ConnectSphere ${{ matrix.service.name }}" \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.projectKey=com.connectsphere:${{ matrix.service }} \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
