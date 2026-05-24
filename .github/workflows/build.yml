@@ -3,38 +3,14 @@ name: SonarQube
 on:
   push:
     branches:
-      - main
-      - dev
       - AuthService
-      - PostService
-      - CommentService
-      - LikeService
-      - FollowService
-      - NotificationService
-      - MediaService
-      - SearchService
-      - ApiGateway
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
   build:
-    name: Build and analyze – ${{ matrix.service }}
+    name: Build and analyze – AuthService
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - AuthService
-          - PostService
-          - CommentService
-          - LikeService
-          - FollowService
-          - NotificationService
-          - MediaService
-          - SearchService
-          - ApiGateway
 
     steps:
       - uses: actions/checkout@v4
@@ -61,8 +37,8 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Build and analyze – ${{ matrix.service }}
-        working-directory: ${{ matrix.service }}
+      - name: Build and analyze
+        working-directory: AuthService        # ← the subfolder inside this branch
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
