@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - main
+      - dev
+      - AuthService
+      - PostService
+      - CommentService
+      - LikeService
+      - FollowService
+      - NotificationService
+      - MediaService
+      - SearchService
+      - ApiGateway
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -57,5 +67,5 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-            -Dsonar.projectKey=govindanay_connectsphere-${{ matrix.service }} \
-            -Dsonar.projectName="ConnectSphere ${{ matrix.service }}"
+            -Dsonar.organization=govindanay \
+            -Dsonar.host.url=https://sonarcloud.io
