@@ -92,7 +92,7 @@ public class AdminController {
 		if (userId == adminId) {
 			throw new RuntimeException("Admin is already activated");
 		}
-		authService.activateAccount(userId);
+		authService.activateAccountAdmin(userId);
 		return ResponseEntity.ok("User " + userId + " activated");
 	}
 

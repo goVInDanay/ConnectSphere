@@ -6,11 +6,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Replaces the production SecurityConfig during @WebMvcTest.
- * Disables CSRF and permits all requests so tests focus on
- * controller logic, not JWT authentication plumbing.
- */
 @TestConfiguration
 public class TestSecurityConfig {
 

@@ -209,6 +209,15 @@ public class AuthServiceImpl implements AuthService {
 		userRepository.save(user);
 		log.info("Account deactivated: userId={}", userId);
 	}
+	
+	@Override
+	public void activateAccountAdmin(int userId) {
+		User user = getUserById(userId);
+		user.setSuspended(false);
+		user.setActive(true);
+		userRepository.save(user);
+		log.info("Account deactivated: userId={}", userId);
+	}
 
 	@Override
 	@Transactional(readOnly = true)
@@ -276,19 +285,6 @@ public class AuthServiceImpl implements AuthService {
 		user.setFlagged(false);
 		user.setReportCount(0);
 		userRepository.save(user);
-	}
-
-	public User processOAuthLogin(String provider, String providerId, String email, String name) {
-		return userRepository.findByProviderAndProviderId(provider, providerId).orElseGet(() -> {
-			return userRepository.findByEmail(email).orElseGet(() -> {
-				String baseUsername = email.split("@")[0];
-				String uniqueUsername = ensureUniqueUsername(baseUsername);
-
-				User newUser = User.builder().username(uniqueUsername).email(email).fullName(name).role("ROLE_USER")
-						.provider(provider).providerId(providerId).isActive(true).build();
-				return userRepository.save(newUser);
-			});
-		});
 	}
 
 	private UserSummary mapToSummary(User user) {

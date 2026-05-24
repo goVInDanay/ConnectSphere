@@ -86,7 +86,7 @@ class AuthControllerTest {
 		loginRequest.setPassword("password123");
 	}
 
-	// ── POST /api/auth/register ─────────────────────────────────────
+	// POST /api/auth/register
 
 	@Test
 	@DisplayName("Register – success → 201 Created with User body")
@@ -130,7 +130,7 @@ class AuthControllerTest {
 				.content(objectMapper.writeValueAsString(registerRequest))).andExpect(status().isBadRequest());
 	}
 
-	// ── POST /api/auth/login ────────────────────────────────────────
+	// POST /api/auth/login
 
 	@Test
 	@DisplayName("Login – success → 200 OK with tokens in body")
@@ -156,7 +156,7 @@ class AuthControllerTest {
 				.content(objectMapper.writeValueAsString(loginRequest))).andExpect(status().isBadRequest());
 	}
 
-	// ── POST /api/auth/logout ───────────────────────────────────────
+	// POST /api/auth/logout
 
 	@Test
 	@WithMockUser
@@ -168,7 +168,7 @@ class AuthControllerTest {
 				.andExpect(status().isOk()).andExpect(jsonPath("$.message").value("Logged out successfully"));
 	}
 
-	// ── GET /api/auth/profile/{userId} ─────────────────────────────
+	// GET /api/auth/profile/{userId}
 
 	@Test
 	@DisplayName("Get profile by ID – found → 200 OK")
@@ -187,7 +187,7 @@ class AuthControllerTest {
 		mockMvc.perform(get("/api/auth/profile/999")).andExpect(status().is5xxServerError());
 	}
 
-	// ── PUT /api/auth/profile ───────────────────────────────────────
+	// PUT /api/auth/profile
 
 //	@Test
 //	@WithMockUser
@@ -235,8 +235,7 @@ class AuthControllerTest {
 //	            .andExpect(jsonPath("$.message").value("Account deactivated"));
 //	}
 
-	// ── GET /api/auth/search ────────────────────────────────────────
-
+	// GET /api/auth/search
 	@Test
 	@DisplayName("Search users – success → 200 OK with list")
 	void searchUsers_success() throws Exception {
@@ -255,7 +254,7 @@ class AuthControllerTest {
 				.andExpect(jsonPath("$.length()").value(0));
 	}
 
-	// ── GET /api/auth/{id}/email ────────────────────────────────────
+	// GET /api/auth/{id}/email
 
 	@Test
 	@DisplayName("Get email by ID – found → 200 OK")
@@ -266,7 +265,7 @@ class AuthControllerTest {
 				.andExpect(jsonPath("$.email").value("john@example.com"));
 	}
 
-	// ── GET /api/auth/username ──────────────────────────────────────
+	// GET /api/auth/username
 
 	@Test
 	@DisplayName("Get users by usernames – success → 200 OK")

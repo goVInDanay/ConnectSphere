@@ -29,6 +29,8 @@ public interface AuthService {
 	void deactivateAccount(int userId);
 
 	void activateAccount(int userId);
+	
+	void activateAccountAdmin(int userId);
 
 	List<User> searchUsers(String term);
 
@@ -49,4 +51,6 @@ public interface AuthService {
 	public void flagUser(int userId);
 	
 	void unflagUser(int userId);
+	
+	
 }

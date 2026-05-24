@@ -84,8 +84,9 @@ public class AuthController {
 
 	@PostMapping("/refresh")
 	public ResponseEntity<Map<String, String>> refresh(HttpServletRequest request, HttpServletResponse response) {
-
+		log.info("Hit refresh endpoint");
 		String refreshToken = extractCookie(request, refreshCookieName);
+		log.info(refreshToken);
 		if (refreshToken == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "No refresh token provided"));
 		}
