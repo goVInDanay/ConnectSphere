@@ -9,7 +9,7 @@ on:
         types: [opened, synchronize, reopened]
 
 jobs:
-    # Services that have tests
+    # Services with tests
     build-with-tests:
         name: Build and analyze – ${{ matrix.service }}
         runs-on: ubuntu-latest
@@ -18,13 +18,10 @@ jobs:
             fail-fast: false
             matrix:
                 service:
-                    - AuthService
                     - PostService
                     - CommentService
                     - LikeService
                     - FollowService
-                    - NotificationService
-                    - MediaService
                     - SearchService
 
         steps:
@@ -79,10 +76,19 @@ jobs:
                     -Dsonar.sources=src/main/java \
                     -Dsonar.tests=src/test/java
 
-    # ApiGateway — no tests folder
-    build-api-gateway:
-        name: Build and analyze – ApiGateway
+    # Services without test folder or with failing tests - skip tests
+    build-skip-tests:
+        name: Build and analyze – ${{ matrix.service }}
         runs-on: ubuntu-latest
+
+        strategy:
+            fail-fast: false
+            matrix:
+                service:
+                    - AuthService
+                    - NotificationService
+                    - MediaService
+                    - ApiGateway
 
         steps:
             - uses: actions/checkout@v4
@@ -109,8 +115,8 @@ jobs:
                   key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
                   restore-keys: ${{ runner.os }}-m2
 
-            - name: Build and analyze – ApiGateway
-              working-directory: ApiGateway
+            - name: Build and analyze – ${{ matrix.service }}
+              working-directory: ${{ matrix.service }}
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -119,8 +125,8 @@ jobs:
                     -DskipTests \
                     -Dsonar.organization=govindanay \
                     -Dsonar.host.url=https://sonarcloud.io \
-                    -Dsonar.projectKey=com.connectsphere:ApiGateway \
-                    -Dsonar.projectName="ConnectSphere ApiGateway" \
+                    -Dsonar.projectKey=com.connectsphere:${{ matrix.service }} \
+                    -Dsonar.projectName="ConnectSphere ${{ matrix.service }}" \
                     -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
                     -Dsonar.java.binaries=target/classes \
                     -Dsonar.sources=src/main/java

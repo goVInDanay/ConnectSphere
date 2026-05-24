@@ -12,11 +12,6 @@
         <version>3.2.5</version>
         <relativePath />
     </parent>
-    <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-test</artifactId>
-        <scope>test</scope>
-    </dependency>
     <groupId>com.connectsphere</groupId>
     <artifactId>FollowService</artifactId>
     <version>0.0.1-SNAPSHOT</version>
