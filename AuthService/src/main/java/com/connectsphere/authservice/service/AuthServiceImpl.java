@@ -52,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
 		log.info("User registered successfully: userId={}", saved.getUserId());
 		try {
 			CreateNotificationRequest notification = CreateNotificationRequest.builder().recipientId(saved.getUserId())
-					.actorId(saved.getUserId()).type("ACCOUNT_ACTION").message("Welcome to ConnectSphere 🎉")
+					.actorId(0).type("ACCOUNT_ACTION").message("Welcome to ConnectSphere")
 					.targetId(saved.getUserId()).targetType("USER").deepLinkUrl("/profile/" + saved.getUserId())
 					.build();
 

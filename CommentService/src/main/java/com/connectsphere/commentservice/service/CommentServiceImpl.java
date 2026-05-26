@@ -55,8 +55,7 @@ public class CommentServiceImpl implements CommentService {
 		Comment parent = requireComment(parentCommentId);
 		if (parent.isReply()) {
 			throw new IllegalArgumentException(
-					"Replies to replies are not allowed. ConnectSphere supports two-level threading only. "
-							+ "Target commentId=" + parentCommentId + " is itself a reply.");
+					"Replies to replies are not allowed. Target commentId=" + parentCommentId + " is itself a reply.");
 		}
 
 		Comment reply = Comment.builder().postId(parent.getPostId()).authorId(request.getAuthorId())

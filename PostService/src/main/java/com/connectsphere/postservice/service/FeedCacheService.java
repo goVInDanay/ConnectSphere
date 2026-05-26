@@ -21,7 +21,6 @@ public class FeedCacheService {
 
 	private static final String FEED_KEY = "feed:user:%d";
 	private final String POST_KEY = "post:%d";
-	private static final String FOLLOWER_PATTERN = "feed:user:*";
 
 	@Value("${app.feed.cache.ttl-seconds:300}")
 	private long feedTtlSeconds;

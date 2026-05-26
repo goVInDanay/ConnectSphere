@@ -45,7 +45,7 @@ public class ReportService {
 	@Transactional
 	public void rejectReport(Integer reportId) {
 		Report report = getReportById(reportId);
-		report.setStatus(ReportStatus.RESOLVED);
+		report.setStatus(ReportStatus.REJECTED);
 		reportRepository.save(report);
 	}
 

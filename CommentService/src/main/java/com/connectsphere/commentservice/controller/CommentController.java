@@ -36,7 +36,6 @@ public class CommentController {
 	@PostMapping
 	public ResponseEntity<Comment> addComment(@AuthenticationPrincipal Integer userId,
 			@Valid @RequestBody CreateCommentRequest request) {
-		log.info("user id" + userId);
 		request.setAuthorId(userId);
 		Comment created = commentService.addComment(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
